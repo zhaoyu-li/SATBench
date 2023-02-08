@@ -1,0 +1,4 @@
+CNFgen
+networkx
+python-sat
+tqdm

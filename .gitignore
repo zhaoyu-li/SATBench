@@ -1,0 +1,5 @@
+satbench.egg-info
+runs
+
+/*.sh
+/*.out
