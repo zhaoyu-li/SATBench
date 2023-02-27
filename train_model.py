@@ -27,7 +27,7 @@ def main():
     parser.add_argument('--contrastive_loss_weight', type=float, default=0.1, help='Use contrastive learning')
     parser.add_argument('--valid_dir', type=str, default=None, help='Directory with validating data')
     parser.add_argument('--valid_splits', type=str, nargs='+', choices=['sat', 'unsat', 'augmented_sat', 'augmented_unsat'], default=None, help='Category of the validating data')
-    parser.add_argument('--valid_sample_size', type=int, default=None, help='The number of instance in validation dataset')    
+    parser.add_argument('--valid_sample_size', type=int, default=None, help='The number of instance in validation dataset')
     parser.add_argument('--valid_augment_ratio', type=float, default=None, help='The ratio between added clauses and all learned clauses')
     parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'assignment', 'unsat_core'], default=None, help='Directory with validating data')
     parser.add_argument('--data_fetching', type=str, choices=['parallel', 'sequential'], default='parallel', help='Fetch data in sequential order or in parallel')
@@ -73,18 +73,18 @@ def main():
 
     opts.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(opts)
-        
+
     model = GNN(opts)
     model.to(opts.device)
 
     optimizer = optim.Adam(model.parameters(), lr=opts.lr, weight_decay=opts.weight_decay)
     train_loader = get_dataloader(opts.train_dir, opts.train_splits, opts.train_sample_size, opts.train_augment_ratio, opts, 'train', opts.use_contrastive_learning)
-    
+
     if opts.valid_dir is not None:
         valid_loader = get_dataloader(opts.valid_dir, opts.valid_splits, opts.valid_sample_size, opts.valid_augment_ratio, opts, 'valid')
     else:
         valid_loader = None
-    
+
     if opts.scheduler is not None:
         if opts.scheduler == 'ReduceLROnPlateau':
             assert opts.valid_dir is not None
@@ -92,7 +92,7 @@ def main():
         else:
             assert opts.scheduler == 'StepLR'
             scheduler = StepLR(optimizer, step_size=opts.lr_step_size, gamma=opts.lr_factor)
-    
+
     if opts.task == 'satisfiability':
         format_table = FormatTable()
 
@@ -107,19 +107,19 @@ def main():
 
         if opts.task == 'satisfiability':
             format_table.reset()
-        
+
         model.train()
         for data in train_loader:
             optimizer.zero_grad()
             data = data.to(opts.device)
             batch_size = data.num_graphs
-            
+
             if opts.task == 'satisfiability':
                 if opts.use_contrastive_learning:
                     pred, sim = model(data)
                     label = data.y
                     classication_loss = F.binary_cross_entropy(pred, label)
-                    
+
                     positive_index = data.positive_index
                     num_pairs = batch_size // 2
                     contrastive_loss = -safe_log(sim[positive_index] / sim.sum(dim=1)).mean() * opts.contrastive_loss_weight
@@ -128,7 +128,7 @@ def main():
                     pred = model(data)
                     label = data.y
                     loss = F.binary_cross_entropy(pred, label)
-                
+
                 format_table.update(pred, label)
 
             elif opts.task == 'assignment':
@@ -136,30 +136,31 @@ def main():
 
                 if opts.loss == 'supervised':
                     label = data.y
+                    loss = F.binary_cross_entropy(v_pred, label)
+
                 elif opts.loss == 'unsupervised':
                     c_size = data.c_size.sum().item()
                     c_batch = data.c_batch
                     l_edge_index = data.l_edge_index
                     c_edge_index = data.c_edge_index
-                    
+
                     l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
                     l_pred_aggr = scatter_sum(safe_log(1 - l_pred[l_edge_index]), c_edge_index, dim=0, dim_size=c_size)
                     c_loss = -safe_log(1 - l_pred_aggr.exp())
                     loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
 
-                    v_assign = (v_pred > 0.5).float()
-                    l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
-                    c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
-                    sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
-                    
-                    train_cnt += sat_batch.sum().item()
+                v_assign = (v_pred > 0.5).float()
+                l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
+                c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
+                sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
+                train_cnt += sat_batch.sum().item()
 
             train_loss += loss.item() * batch_size
             train_tot += batch_size
             loss.backward()
             # torch.nn.utils.clip_grad_norm_(model.parameters(), opts.clip_norm)
             optimizer.step()
-            
+
         train_loss /= train_tot
         print('Training LR: %f, Training loss: %f' % (optimizer.param_groups[0]['lr'], train_loss))
 
@@ -171,12 +172,12 @@ def main():
 
         if epoch % opts.save_model_epochs == 0:
             torch.save({
-                'state_dict': model.state_dict(), 
+                'state_dict': model.state_dict(),
                 'epoch': epoch,
-                'optimizer': optimizer.state_dict()}, 
+                'optimizer': optimizer.state_dict()},
                 os.path.join(opts.checkpoint_dir, 'model_%d.pt' % epoch)
             )
-        
+
         if opts.valid_dir is not None:
             print('Validating...')
             valid_loss = 0
@@ -185,7 +186,7 @@ def main():
 
             if opts.task == 'satisfiability':
                 format_table.reset()
-            
+
             model.eval()
             for data in valid_loader:
                 data = data.to(opts.device)
@@ -199,25 +200,30 @@ def main():
                     elif opts.task == 'assignment':
                         v_pred = model(data)
 
-                        c_size = data.c_size.sum().item()
-                        c_batch = data.c_batch
-                        l_edge_index = data.l_edge_index
-                        c_edge_index = data.c_edge_index
+                        if opts.loss == 'supervised':
+                            label = data.y
+                            loss = F.binary_cross_entropy(v_pred, label)
 
-                        l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
-                        l_pred_aggr = scatter_sum(safe_log(1 - l_pred[l_edge_index]), c_edge_index, dim=0, dim_size=c_size)
-                        c_loss = -safe_log(1 - l_pred_aggr.exp())
-                        loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
+                        elif opts.loss == 'unsupervised':
+                            c_size = data.c_size.sum().item()
+                            c_batch = data.c_batch
+                            l_edge_index = data.l_edge_index
+                            c_edge_index = data.c_edge_index
+
+                            l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
+                            l_pred_aggr = scatter_sum(safe_log(1 - l_pred[l_edge_index]), c_edge_index, dim=0, dim_size=c_size)
+                            c_loss = -safe_log(1 - l_pred_aggr.exp())
+                            loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
 
                         v_assign = (v_pred > 0.5).float()
                         l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
                         c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
                         sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
                         valid_cnt += sat_batch.sum().item()
-                                
+
                 valid_loss += loss.item() * batch_size
                 valid_tot += batch_size
-            
+
             valid_loss /= valid_tot
             print('Validating loss: %f' % valid_loss)
 
@@ -231,8 +237,8 @@ def main():
                 best_loss = valid_loss
                 torch.save({
                     'state_dict': model.state_dict(),
-                    'epoch': epoch, 
-                    'optimizer': optimizer.state_dict()}, 
+                    'epoch': epoch,
+                    'optimizer': optimizer.state_dict()},
                     os.path.join(opts.checkpoint_dir, 'model_best.pt')
                 )
 

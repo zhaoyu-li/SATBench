@@ -26,15 +26,16 @@ class Generator:
         unsat = False
         
         while not sat or not unsat:
+            k = random.randint(self.opts.min_k, self.opts.max_k)
             n_vars = random.randint(self.opts.min_n, self.opts.max_n)
-            r = random.uniform(3, 4)
+            r = random.uniform(2, 4)
             n_clauses = int(r * n_vars)
-            n_communities = min(random.randint(self.opts.min_c, self.opts.max_c), n_vars/3)
+            n_communities = min(random.randint(self.opts.min_c, self.opts.max_c), int(n_vars/k))
             modularity = random.uniform(self.opts.min_q, self.opts.max_q)
             
             cnf_filepath = os.path.join(self.opts.out_dir, '%.5d.cnf' % (t))
             cmd_line = ['./ca', '-n', str(n_vars), '-m', str(n_clauses), '-c', str(n_communities), \
-                '-Q', str(modularity), '-s', str(random.randint(0, 2**32)), '-o', cnf_filepath]
+                '-Q', str(modularity), '-k', str(k), '-s', str(random.randint(0, 2**32)), '-o', cnf_filepath]
             
             try:
                 process = subprocess.Popen(cmd_line, cwd=self.exec_dir, start_new_session=True)
@@ -69,6 +70,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('out_dir', type=str)
     parser.add_argument('n_instances', type=int)
+
+    parser.add_argument('--min_k', type=int, default=3)
+    parser.add_argument('--max_k', type=int, default=5)
 
     parser.add_argument('--min_n', type=int, default=10)
     parser.add_argument('--max_n', type=int, default=100)

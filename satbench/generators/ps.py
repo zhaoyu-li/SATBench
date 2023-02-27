@@ -26,14 +26,16 @@ class Generator:
         unsat = True
         
         while not sat or not unsat:
+            k = random.randint(self.opts.min_k, self.opts.max_k)
             n_vars = random.randint(self.opts.min_n, self.opts.max_n)
-            r = random.uniform(3, 4.)
+            r = random.uniform(2, 4)
             n_clauses = int(r * n_vars)
             b = random.uniform(self.opts.min_b, self.opts.max_b)
+            T = random.uniform(self.opts.min_T, self.opts.max_T)
             
             cnf_filepath = os.path.join(self.opts.out_dir, '%.5d.cnf' % (t))
-            cmd_line = ['./ps', '-n', str(n_vars), '-m', str(n_clauses), '-b', str(b), \
-                 '-B', '0', '-s', str(random.randint(0, 2**32))]
+            cmd_line = ['./ps', '-n', str(n_vars), '-m', str(n_clauses), '-k', str(k-3), \
+                '-b', str(b), '-T', str(T), '-s', str(random.randint(0, 2**32))]
             
             with open(cnf_filepath, 'w') as f:
                 try:
@@ -71,11 +73,17 @@ def main():
     parser.add_argument('out_dir', type=str)
     parser.add_argument('n_instances', type=int)
 
+    parser.add_argument('--min_k', type=int, default=3)
+    parser.add_argument('--max_k', type=int, default=5)
+
     parser.add_argument('--min_n', type=int, default=10)
     parser.add_argument('--max_n', type=int, default=40)
 
     parser.add_argument('--min_b', type=float, default=0)
     parser.add_argument('--max_b', type=float, default=1)
+
+    parser.add_argument('--min_T', type=float, default=0)
+    parser.add_argument('--max_T', type=float, default=1.5)
 
     parser.add_argument('--print_interval', type=int, default=1000)
 

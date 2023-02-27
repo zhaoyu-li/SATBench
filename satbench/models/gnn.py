@@ -623,8 +623,7 @@ class GNN_VCG(nn.Module):
 
         elif self.opts.task == 'assignment':
             v_logit = self.v_readout(v_emb)
-            v_prob = torch.sigmoid(v_logit)
-            return torch.cat([v_prob, 1 - v_prob], dim=1)
+            return torch.sigmoid(v_logit)
 
 
 def GNN(opts):
