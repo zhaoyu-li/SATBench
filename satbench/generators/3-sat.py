@@ -58,14 +58,14 @@ def main():
 
     parser.add_argument('--print_interval', type=int, default=1000)
 
-    parser.add_argument('--n_process', type=int, default=32, help='Number of processes to run')
+    parser.add_argument('--n_process', type=int, default=10, help='Number of processes to run')
 
     opts = parser.parse_args()
 
-    generater = Generator(opts)
+    generator = Generator(opts)
     
     with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
-        pool.map(generater.run, range(opts.n_instances))
+        pool.map(generator.run, range(opts.n_instances))
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 import os
 import argparse
 import random
+import math
 import networkx as nx
 
 from concurrent.futures.process import ProcessPoolExecutor
@@ -24,14 +25,15 @@ class Generator:
         sat = False
         unsat = False
         
+        # ensure k is uniformly sampled
+        k = random.randint(self.opts.min_k, self.opts.max_k)
+        
         while not sat or not unsat:
-            v = random.randint(self.opts.min_v, self.opts.max_v)
-            p = 0.25
+            v = random.randint(max(self.opts.min_v, k + 1), self.opts.max_v)
+            p = 1 - pow(1 - pow(1/math.comb(v,k), 1/(v-k)), 1/k)
             graph = nx.generators.erdos_renyi_graph(v, p=p)
-            while not nx.is_connected(graph):
-                graph = nx.generators.erdos_renyi_graph(v, p=p)
-            
-            k = random.randint(self.opts.min_k, self.opts.max_k)
+            if not nx.is_connected(graph):
+                continue
 
             cnf = DominatingSet(graph, k)
             n_vars = len(list(cnf.variables()))
@@ -61,14 +63,14 @@ def main():
     parser.add_argument('--min_k', type=int, default=3)
     parser.add_argument('--max_k', type=int, default=5)
 
-    parser.add_argument('--min_v', type=int, default=10)
-    parser.add_argument('--max_v', type=int, default=40)
+    parser.add_argument('--min_v', type=int, default=5)
+    parser.add_argument('--max_v', type=int, default=20)
 
     parser.add_argument('--seed', type=int, default=0)
 
     parser.add_argument('--print_interval', type=int, default=1000)
 
-    parser.add_argument('--n_process', type=int, default=32, help='Number of processes to run')
+    parser.add_argument('--n_process', type=int, default=10, help='Number of processes to run')
 
     opts = parser.parse_args()
 
@@ -76,10 +78,10 @@ def main():
 
     os.makedirs(opts.out_dir, exist_ok=True)
 
-    generater = Generator(opts)
+    generator = Generator(opts)
     
     with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
-        pool.map(generater.run, range(opts.n_instances))
+        pool.map(generator.run, range(opts.n_instances))
 
 
 if __name__ == '__main__':

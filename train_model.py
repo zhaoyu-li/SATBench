@@ -35,7 +35,7 @@ def main():
     parser.add_argument('--save_model_epochs', type=int, default=1, help='Number of epochs between model savings')
     parser.add_argument('--num_workers', type=int, default=8, help='Number of workers for data loading')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
-    parser.add_argument('--epochs', type=int, default=200, help='Number of epochs during training')
+    parser.add_argument('--epochs', type=int, default=100, help='Number of epochs during training')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--weight_decay', type=float, default=1e-8, help='L2 regularization weight')
     parser.add_argument('--scheduler', type=str, default=None, help='Scheduler')
@@ -44,6 +44,7 @@ def main():
     parser.add_argument('--lr_patience', type=int, default=10, help='Learning rate patience')
     parser.add_argument('--clip_norm', type=float, default=0.65, help='Clipping norm')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
+    parser.add_argument('--run_dir', type=str, default='~/scratch/runs/', help='Directory with training data')
 
     add_model_options(parser)
 
@@ -59,9 +60,9 @@ def main():
             names.append(split)
     splits_name = '_'.join(names)
     exp_name = f'task={opts.task}_difficulty={difficulty}_dataset={dataset}_splits={splits_name}_label={opts.label}_loss={opts.loss}/' + \
-        f'graph={opts.graph}_init_emb={opts.init_emb}_model={opts.model}_n_iterations={opts.n_iterations}_seed={opts.seed}'
+        f'graph={opts.graph}_init_emb={opts.init_emb}_model={opts.model}_n_iterations={opts.n_iterations}_seed={opts.seed}_lr={opts.lr}_weight_decay={opts.weight_decay}'
 
-    opts.log_dir = os.path.join('runs', exp_name)
+    opts.log_dir = os.path.join(os.path.expanduser(opts.run_dir), exp_name)
     opts.checkpoint_dir = os.path.join(opts.log_dir, 'checkpoints')
 
     os.makedirs(opts.log_dir, exist_ok=True)
@@ -97,7 +98,6 @@ def main():
         format_table = FormatTable()
 
     best_loss = float('inf')
-
     for epoch in range(opts.epochs):
         print('EPOCH #%d' % epoch)
         print('Training...')
@@ -137,7 +137,6 @@ def main():
                 if opts.loss == 'supervised':
                     label = data.y
                     loss = F.binary_cross_entropy(v_pred, label)
-
                 elif opts.loss == 'unsupervised':
                     c_size = data.c_size.sum().item()
                     c_batch = data.c_batch
@@ -153,6 +152,7 @@ def main():
                 l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
                 c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
                 sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
+
                 train_cnt += sat_batch.sum().item()
 
             train_loss += loss.item() * batch_size
@@ -203,7 +203,6 @@ def main():
                         if opts.loss == 'supervised':
                             label = data.y
                             loss = F.binary_cross_entropy(v_pred, label)
-
                         elif opts.loss == 'unsupervised':
                             c_size = data.c_size.sum().item()
                             c_batch = data.c_batch

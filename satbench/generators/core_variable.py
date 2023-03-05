@@ -6,11 +6,12 @@ import subprocess
 import numpy as np
 
 from concurrent.futures.process import ProcessPoolExecutor
+from satbench.utils.utils import ROOT_DIR
 
 
 class Generator:
     def __init__(self):
-        self.exec_dir = os.path.abspath('external/')
+        self.exec_dir = os.path.join(ROOT_DIR, 'external')
 
     def run(self, cnf_filepath):
         filename = os.path.splitext(os.path.basename(cnf_filepath))[0]
@@ -62,11 +63,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input_dir', type=str)
     parser.add_argument('splits', type=str, nargs='+')
-    parser.add_argument('--n_process', type=int, default=32, help='Number of processes to run')
+    parser.add_argument('--n_process', type=int, default=10, help='Number of processes to run')
 
     opts = parser.parse_args()
 
-    generater = Generator()
+    generator = Generator()
 
     all_files = [sorted(glob.glob(opts.input_dir + f'/{split}/*.cnf', recursive=True)) for split in opts.splits]
     all_files = list(itertools.chain(*all_files))
@@ -75,7 +76,7 @@ def main():
     all_files = [os.path.abspath(f) for f in all_files]
     
     with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
-        pool.map(generater.run, all_files)
+        pool.map(generator.run, all_files)
 
 
 if __name__ == '__main__':

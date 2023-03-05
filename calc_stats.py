@@ -5,8 +5,7 @@ import networkx as nx
 import networkx.algorithms.community as nx_comm
 
 from tqdm import tqdm
-from networkx.algorithms import bipartite
-from satbenchmark.utils.utils import parse_cnf_file, VIG, VCG
+from satbench.utils.utils import parse_cnf_file, VIG, VCG
 from collections import defaultdict
 
 
