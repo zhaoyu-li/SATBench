@@ -20,7 +20,6 @@ def main():
     parser.add_argument('task', type=str, choices=['satisfiability', 'assignment'], help='Experiment task')
     parser.add_argument('test_dir', type=str, help='Directory with testing data')
     parser.add_argument('checkpoint', type=str, help='Checkpoint to be tested')
-    parser.add_argument('--use_contrastive_learning', type=str, help='Checkpoint to be tested')
     parser.add_argument('--test_splits', type=str, nargs='+', choices=['sat', 'unsat', 'augmented_sat', 'augmented_unsat', 'trimmed'], default=None, help='Validation splits')
     parser.add_argument('--test_sample_size', type=int, default=None, help='The number of instance in validation dataset')
     parser.add_argument('--test_augment_ratio', type=float, default=None, help='The ratio between added clauses and all learned clauses')
@@ -43,7 +42,7 @@ def main():
     checkpoint_name = os.path.splitext(os.path.basename(opts.checkpoint))[0]
     os.makedirs(opts.eval_dir, exist_ok=True)
 
-    opts.log = os.path.join(opts.log_dir, 'log.txt')
+    opts.log = os.path.join(opts.log_dir, f'eval_log_iterations_{opts.n_iterations}.txt')
     sys.stdout = Logger(opts.log, sys.stdout)
     sys.stderr = Logger(opts.log, sys.stderr)
 
@@ -81,17 +80,9 @@ def main():
         batch_size = data.num_graphs
         with torch.no_grad():
             if opts.task == 'satisfiability':
-                pred, l_logit = model(data)
+                pred = model(data)
                 label = data.y
-                # print(data.cnf_filepath)
-                # print(l_logit)
-                # print(pred)
-                # print(label)
-                # input()
-                loss = F.binary_cross_entropy(pred, label)
-                # test_acc += torch.sum((pred > 0.5).float() == label).item()
                 format_table.update(pred, label)
-
                 all_results.extend(pred.tolist())
             else:
                 pass
@@ -99,8 +90,6 @@ def main():
         test_tot += batch_size
     
     if opts.task == 'satisfiability':
-        # test_acc /= test_tot
-        # print('Testing accuracy: %f' % test_acc)
         format_table.print_stats()
     elif opts.task == 'assignment':
         pass
@@ -108,9 +97,9 @@ def main():
     t = time.time() - t0
     print('Solving Time: %f' % t)
 
-    with open('%s/task=%s_difficulty=%s_dataset=%s_split=%s_checkpoint=%s_n_iterations=%d.pkl' % \
-        (opts.eval_dir, opts.task, difficulty, dataset, '_'.join(opts.test_splits), checkpoint_name, opts.n_iterations), 'wb') as f:
-        pickle.dump((all_results, test_acc), f)
+    # with open('%s/task=%s_difficulty=%s_dataset=%s_split=%s_checkpoint=%s_n_iterations=%d.pkl' % \
+    #     (opts.eval_dir, opts.task, difficulty, dataset, '_'.join(opts.test_splits), checkpoint_name, opts.n_iterations), 'wb') as f:
+    #     pickle.dump((all_results, test_acc), f)
 
 
 if __name__ == '__main__':

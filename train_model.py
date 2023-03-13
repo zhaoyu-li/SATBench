@@ -1,5 +1,5 @@
 import torch
-torch.autograd.set_detect_anomaly(True)
+torch.autograd.set_detect_anomaly(False)
 import torch.nn.functional as F
 import torch.optim as optim
 import os
