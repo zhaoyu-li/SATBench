@@ -21,11 +21,8 @@ class Generator:
     def run(self, t):
         if t % self.opts.print_interval == 0:
             print('Generating instance %d.' % t)
-
-        sat = False
-        unsat = False
         
-        while not sat or not unsat:
+        while True:
             # Number of factorys
             f = random.randint(self.opts.min_f, self.opts.max_f)
             # Number of workers
@@ -72,17 +69,11 @@ class Generator:
             solver = Cadical(bootstrap_with=clauses)
 
             if solver.solve():
-                if not sat:
-                    sat = True
-                    write_dimacs_to(n_vars, clauses, os.path.join(self.opts.sat_out_dir, '%.5d.cnf' % (t)))
-            else:
-                if not unsat:
-                    unsat = True
-                    write_dimacs_to(n_vars, clauses, os.path.join(self.opts.unsat_out_dir, '%.5d.cnf' % (t)))
+                write_dimacs_to(n_vars, clauses, os.path.join(self.opts.sat_out_dir, '%.5d.cnf' % (t)))
+                os.remove(table_filepath)
+                os.remove(cnf_filepath)
+                break
             
-            os.remove(table_filepath)
-            os.remove(cnf_filepath)
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -92,8 +83,8 @@ def main():
     parser.add_argument('--min_f', type=int, default=15)
     parser.add_argument('--max_f', type=int, default=25)
 
-    parser.add_argument('--min_w', type=int, default=25)
-    parser.add_argument('--max_w', type=int, default=35)
+    parser.add_argument('--min_w', type=int, default=35)
+    parser.add_argument('--max_w', type=int, default=45)
 
     parser.add_argument('--min_j', type=int, default=15)
     parser.add_argument('--max_j', type=int, default=25)
@@ -109,11 +100,11 @@ def main():
 
     generator = Generator(opts)
     
-    # with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
-    #     pool.map(generator.run, range(opts.n_instances))
+    with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
+        pool.map(generator.run, range(opts.n_instances))
     
-    for i in range(opts.n_instances):
-        generator.run(i)
+    # for i in range(opts.n_instances):
+    #     generator.run(i)
 
 
 if __name__ == '__main__':

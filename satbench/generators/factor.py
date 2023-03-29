@@ -20,21 +20,16 @@ class Generator:
         if t % self.opts.print_interval == 0:
             print('Generating instance %d.' % t)
         
-        while True:
-            factor1 = sympy.randprime(pow(2, self.opts.min_b), pow(2, self.opts.max_b))
-            factor2 = sympy.randprime(pow(2, self.opts.min_b), pow(2, self.opts.max_b))
+        factor1 = sympy.randprime(pow(2, self.opts.min_b), pow(2, self.opts.max_b))
+        factor2 = sympy.randprime(pow(2, self.opts.min_b), pow(2, self.opts.max_b))
 
-            cnf_filepath = os.path.abspath(os.path.join(self.opts.sat_out_dir, '%.5d.cnf' % (t)))
-            dimacs = generate_instance_known_factors(factor1, factor2)
-            
-            with open(cnf_filepath, 'w') as f:
-                f.write(dimacs)
-            
-            n_vars, clauses = parse_cnf_file(cnf_filepath)
-            vig = VIG(n_vars, clauses)
-            if nx.is_connected(vig):
-                break
-
+        cnf_filepath = os.path.abspath(os.path.join(self.opts.sat_out_dir, '%.5d.cnf' % (t)))
+        dimacs = generate_instance_known_factors(factor1, factor2)
+        
+        with open(cnf_filepath, 'w') as f:
+            f.write(dimacs)
+        
+        n_vars, clauses = parse_cnf_file(cnf_filepath)
         solver = Cadical(bootstrap_with=clauses)
         sat = solver.solve()
         assert sat == True
@@ -58,7 +53,7 @@ def main():
     
     with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
         pool.map(generator.run, range(opts.n_instances))
-    
+
 
 if __name__ == '__main__':
     main()

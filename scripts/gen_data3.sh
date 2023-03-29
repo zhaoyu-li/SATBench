@@ -1,13 +1,5 @@
 # k-clique
-python satbench/generators/k-clique.py ~/scratch/satbench/easy/k-clique/train 80000 --min_v 5 --max_v 20
-python satbench/generators/k-clique.py ~/scratch/satbench/easy/k-clique/valid 10000 --min_v 5 --max_v 20
-python satbench/generators/k-clique.py ~/scratch/satbench/easy/k-clique/test 10000 --min_v 5 --max_v 20
-
-python satbench/generators/k-clique.py ~/scratch/satbench/medium/k-clique/train 80000 --min_v 20 --max_v 50
-python satbench/generators/k-clique.py ~/scratch/satbench/medium/k-clique/valid 10000 --min_v 20 --max_v 50
-python satbench/generators/k-clique.py ~/scratch/satbench/medium/k-clique/test 10000 --min_v 20 --max_v 50
-
-python satbench/generators/k-clique.py ~/scratch/satbench/hard/k-clique/test 10000 --min_v 50 --max_v 100
+python satbench/generators/satfactor.py ~/scratch/satbench/hard/k-clique/test 10000 --min_v 50 --max_v 100
 
 # k-color
 python satbench/generators/k-color.py ~/scratch/satbench/easy/k-color/train 80000 --min_v 5 --max_v 20

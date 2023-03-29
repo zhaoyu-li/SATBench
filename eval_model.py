@@ -25,7 +25,6 @@ def main():
     parser.add_argument('--test_augment_ratio', type=float, default=None, help='The ratio between added clauses and all learned clauses')
     parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'assignment', 'unsat_core'], default=None, help='Directory with validating data')
     parser.add_argument('--data_fetching', type=str, choices=['parallel', 'sequential'], default='parallel', help='Fetch data in sequential order or in parallel')
-    parser.add_argument('--num_workers', type=int, default=8, help='Number of workers for data loading')
     parser.add_argument('--batch_size', type=int, default=512, help='Batch size')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
 
@@ -42,7 +41,7 @@ def main():
     checkpoint_name = os.path.splitext(os.path.basename(opts.checkpoint))[0]
     os.makedirs(opts.eval_dir, exist_ok=True)
 
-    opts.log = os.path.join(opts.log_dir, f'eval_log_iterations_{opts.n_iterations}.txt')
+    opts.log = os.path.join(opts.log_dir, f'eval_log_iterations_{opts.n_iterations}_test_{opts.test_dir.split("/")[-3]}_{opts.test_dir.split("/")[-4]}.txt')
     sys.stdout = Logger(opts.log, sys.stdout)
     sys.stderr = Logger(opts.log, sys.stderr)
 

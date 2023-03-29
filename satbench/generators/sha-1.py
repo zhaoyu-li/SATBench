@@ -39,13 +39,10 @@ class Generator:
             except:
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
             
-            if not os.path.exists(cnf_filepath):
-                continue
-            
-            n_vars, clauses = parse_cnf_file(cnf_filepath)
-            vig = VIG(n_vars, clauses)
-            if nx.is_connected(vig):
+            if os.path.exists(cnf_filepath):
                 break
+            
+        n_vars, clauses = parse_cnf_file(cnf_filepath)
 
         solver = Cadical(bootstrap_with=clauses)
         sat = solver.solve()

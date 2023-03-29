@@ -18,14 +18,17 @@ def calc_stats(f):
     vig = VIG(n_vars, clauses)
     vcg = VCG(n_vars, clauses)
 
+    is_connected_vig =  nx.is_connected(vig)
+    is_connected_vcg =  nx.is_connected(vig)
+
     return {
         'n_vars': n_vars,
         'n_clauses': len(clauses),
-        'vig-diameter': nx.diameter(vig),
-        'vig-characteristic_path_length': nx.average_shortest_path_length(vig),
-        'vig-clustering_coefficient': nx.average_clustering(vig),
-        'vig-modularity': nx_comm.modularity(vig, nx_comm.louvain_communities(vig)),
-        'vcg-modularity': nx_comm.modularity(vcg, nx_comm.louvain_communities(vcg))
+        'vig-diameter': nx.diameter(vig) if is_connected_vig else -1,
+        'vig-characteristic_path_length': nx.average_shortest_path_length(vig) if is_connected_vig else -1,
+        'vig-clustering_coefficient': nx.average_clustering(vig) if is_connected_vig else -1,
+        'vig-modularity': nx_comm.modularity(vig, nx_comm.louvain_communities(vig)) if is_connected_vig else -1,
+        'vcg-modularity': nx_comm.modularity(vcg, nx_comm.louvain_communities(vcg)) if is_connected_vcg else -1
     }
 
 

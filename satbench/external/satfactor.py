@@ -3106,7 +3106,7 @@ def generate_instance(target, n_a, n_b, a=0, b=0, includefactors=False):
         midpoint = -(-len(_x)//2)
         smaller_size, larger_size = sorted((len(_x),len(_y)))
         if smaller_size == 1:
-            circuit.append( {'op':and_gates, 'x': _x*len(_y), 'y':_y*len(_x), 'z':map(next,(dummy,)*larger_size)})
+            circuit.append( {'op':and_gates, 'x': _x*len(_y), 'y':_y*len(_x), 'z':tuple(map(next,(dummy,)*larger_size)) })
             return circuit[-1]['z']
         if larger_size <= max(multipliers):
             z= tuple(next(dummy) for i in range(2*larger_size))

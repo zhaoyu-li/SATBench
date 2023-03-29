@@ -33,7 +33,6 @@ def main():
     parser.add_argument('--data_fetching', type=str, choices=['parallel', 'sequential'], default='parallel', help='Fetch data in sequential order or in parallel')
     parser.add_argument('--loss', type=str, choices=[None, 'unsupervised', 'unsupervisedv2', 'supervised'], default=None, help='Loss type for assignment prediction')
     parser.add_argument('--save_model_epochs', type=int, default=1, help='Number of epochs between model savings')
-    parser.add_argument('--num_workers', type=int, default=8, help='Number of workers for data loading')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs during training')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
