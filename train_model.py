@@ -35,13 +35,12 @@ def main():
     parser.add_argument('--save_model_epochs', type=int, default=1, help='Number of epochs between model savings')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs during training')
-    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=2e-5, help='Learning rate')
     parser.add_argument('--weight_decay', type=float, default=1e-8, help='L2 regularization weight')
     parser.add_argument('--scheduler', type=str, default=None, help='Scheduler')
     parser.add_argument('--lr_step_size', type=int, default=50, help='Learning rate step size')
     parser.add_argument('--lr_factor', type=float, default=0.5, help='Learning rate factor')
     parser.add_argument('--lr_patience', type=int, default=10, help='Learning rate patience')
-    parser.add_argument('--clip_norm', type=float, default=0.65, help='Clipping norm')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
     parser.add_argument('--run_dir', type=str, default='~/scratch/runs/', help='Directory with training data')
 
@@ -157,7 +156,6 @@ def main():
             train_loss += loss.item() * batch_size
             train_tot += batch_size
             loss.backward()
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), opts.clip_norm)
             optimizer.step()
 
         train_loss /= train_tot
