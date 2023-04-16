@@ -64,7 +64,7 @@ class SATDataset(Dataset):
                     labels[split].append(torch.tensor(core_variable, dtype=torch.float))
         else:
             assert self.opts.label == None
-            for split in splits:
+            for split in self.splits:
                 labels[split] = [None] * self.split_len
         
         return labels

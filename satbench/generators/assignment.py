@@ -5,7 +5,6 @@ import pickle
 import subprocess
 import numpy as np
 import itertools
-import time
 
 from concurrent.futures.process import ProcessPoolExecutor
 from satbench.utils.utils import ROOT_DIR
@@ -62,13 +61,9 @@ def main():
 
     assert len(all_files) > 0
     all_files = [os.path.abspath(f) for f in all_files]
-
-    t = time.time()
     
     with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
         pool.map(generator.run, all_files)
-    
-    print(time.time() - t)
     
 
 if __name__ == '__main__':

@@ -93,11 +93,11 @@ def main():
 
     generator = Generator(opts)
     
-    # with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
-    #     pool.map(generator.run, range(opts.n_instances))
+    with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
+        pool.map(generator.run, range(opts.n_instances))
     
-    for i in range(opts.n_instances):
-        generator.run(i)
+    # for i in range(opts.n_instances):
+    #     generator.run(i)
     
 
 if __name__ == '__main__':

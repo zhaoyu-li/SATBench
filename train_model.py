@@ -1,5 +1,4 @@
 import torch
-torch.autograd.set_detect_anomaly(False)
 import torch.nn.functional as F
 import torch.optim as optim
 import os
@@ -29,18 +28,19 @@ def main():
     parser.add_argument('--valid_splits', type=str, nargs='+', choices=['sat', 'unsat', 'augmented_sat', 'augmented_unsat'], default=None, help='Category of the validating data')
     parser.add_argument('--valid_sample_size', type=int, default=None, help='The number of instance in validation dataset')
     parser.add_argument('--valid_augment_ratio', type=float, default=None, help='The ratio between added clauses and all learned clauses')
-    parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'assignment', 'unsat_core'], default=None, help='Directory with validating data')
+    parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'assignment', 'unsat_core'], default=None, help='Label')
     parser.add_argument('--data_fetching', type=str, choices=['parallel', 'sequential'], default='parallel', help='Fetch data in sequential order or in parallel')
     parser.add_argument('--loss', type=str, choices=[None, 'unsupervised', 'unsupervisedv2', 'supervised'], default=None, help='Loss type for assignment prediction')
     parser.add_argument('--save_model_epochs', type=int, default=1, help='Number of epochs between model savings')
     parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs during training')
-    parser.add_argument('--lr', type=float, default=2e-5, help='Learning rate')
+    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--weight_decay', type=float, default=1e-8, help='L2 regularization weight')
     parser.add_argument('--scheduler', type=str, default=None, help='Scheduler')
     parser.add_argument('--lr_step_size', type=int, default=50, help='Learning rate step size')
     parser.add_argument('--lr_factor', type=float, default=0.5, help='Learning rate factor')
     parser.add_argument('--lr_patience', type=int, default=10, help='Learning rate patience')
+    parser.add_argument('--clip_norm', type=float, default=1.0, help='Clipping norm')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
     parser.add_argument('--run_dir', type=str, default='~/scratch/runs/', help='Directory with training data')
 
@@ -146,6 +146,28 @@ def main():
                     c_loss = -safe_log(1 - l_pred_aggr.exp())
                     loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
 
+                elif opts.loss == 'unsupervisedv2':
+                    c_size = data.c_size.sum().item()
+                    c_batch = data.c_batch
+                    l_edge_index = data.l_edge_index
+                    c_edge_index = data.c_edge_index
+
+                    l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
+                    s_max_denom = (l_pred[l_edge_index] / 1).exp()
+                    s_max_nom = l_pred[l_edge_index] * s_max_denom
+
+                    c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
+                    c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
+                    c_pred = c_nom / c_denom
+
+                    s_min_denom = (-c_nom / 1).exp()
+                    s_min_nom = c_nom * s_min_denom
+                    s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
+                    s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
+
+                    score = s_nom / s_denom
+                    loss = (1 - score).mean()
+
                 v_assign = (v_pred > 0.5).float()
                 l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
                 c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
@@ -156,6 +178,7 @@ def main():
             train_loss += loss.item() * batch_size
             train_tot += batch_size
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), opts.clip_norm)
             optimizer.step()
 
         train_loss /= train_tot
@@ -210,6 +233,49 @@ def main():
                             l_pred_aggr = scatter_sum(safe_log(1 - l_pred[l_edge_index]), c_edge_index, dim=0, dim_size=c_size)
                             c_loss = -safe_log(1 - l_pred_aggr.exp())
                             loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
+                        elif opts.loss == 'unsupervisedv2':
+                            c_size = data.c_size.sum().item()
+                            c_batch = data.c_batch
+                            l_edge_index = data.l_edge_index
+                            c_edge_index = data.c_edge_index
+
+                            l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
+                            s_max_denom = (l_pred[l_edge_index] / 1).exp()
+                            if torch.any(torch.isnan(s_max_denom)):
+                                print('!!!!!!!! s_max_denom')
+                                input()
+                            s_max_nom = l_pred[l_edge_index] * s_max_denom
+
+                            if torch.any(torch.isnan(s_max_nom)):
+                                print('!!!!!!!! s_max_nom')
+                                input()
+
+                            c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
+                            c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
+                            c_pred = c_nom / c_denom
+
+                            if torch.any(torch.isnan(c_pred)):
+                                print('!!!!!!!! c_pred')
+                                input()
+
+                            s_min_denom = (-c_nom / 1).exp()
+                            s_min_nom = c_nom * s_min_denom
+                            s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
+                            s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
+
+                            if torch.any(torch.isnan(s_min_denom)):
+                                print('!!!!!!!! s_min_denom')
+                                input()
+
+                            if torch.any(torch.isnan(s_min_nom)):
+                                print('!!!!!!!! s_min_nom')
+                                input()
+
+                            score = s_nom / s_denom
+                            if torch.any(torch.isnan(score)):
+                                print('!!!!!!!! score')
+                                input()
+                            loss = (1 - score).mean()
 
                         v_assign = (v_pred > 0.5).float()
                         l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)

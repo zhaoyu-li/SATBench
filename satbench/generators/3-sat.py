@@ -58,7 +58,7 @@ def main():
 
     parser.add_argument('--print_interval', type=int, default=1000)
 
-    parser.add_argument('--n_process', type=int, default=10, help='Number of processes to run')
+    parser.add_argument('--n_process', type=int, default=16, help='Number of processes to run')
 
     opts = parser.parse_args()
 
