@@ -7,7 +7,7 @@ import argparse
 
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from satbench.utils.options import add_model_options
-from satbench.utils.utils import set_seed, safe_log
+from satbench.utils.utils import set_seed, safe_log, safe_div
 from satbench.utils.logger import Logger
 from satbench.utils.format_print import FormatTable
 from satbench.data.dataloader import get_dataloader
@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--lr_patience', type=int, default=10, help='Learning rate patience')
     parser.add_argument('--clip_norm', type=float, default=1.0, help='Clipping norm')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
-    parser.add_argument('--run_dir', type=str, default='~/scratch/runs/', help='Directory with training data')
+    parser.add_argument('--run_dir', type=str, default='/network/scratch/z/zhaoyu.li/runs/')
 
     add_model_options(parser)
 
@@ -158,14 +158,14 @@ def main():
 
                     c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
                     c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
-                    c_pred = c_nom / c_denom
+                    c_pred = save_div(c_nom, c_denom)
 
                     s_min_denom = (-c_nom / 1).exp()
                     s_min_nom = c_nom * s_min_denom
                     s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
                     s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
 
-                    score = s_nom / s_denom
+                    score = save_div(s_nom, s_denom)
                     loss = (1 - score).mean()
 
                 v_assign = (v_pred > 0.5).float()
@@ -241,40 +241,18 @@ def main():
 
                             l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
                             s_max_denom = (l_pred[l_edge_index] / 1).exp()
-                            if torch.any(torch.isnan(s_max_denom)):
-                                print('!!!!!!!! s_max_denom')
-                                input()
                             s_max_nom = l_pred[l_edge_index] * s_max_denom
-
-                            if torch.any(torch.isnan(s_max_nom)):
-                                print('!!!!!!!! s_max_nom')
-                                input()
 
                             c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
                             c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
-                            c_pred = c_nom / c_denom
-
-                            if torch.any(torch.isnan(c_pred)):
-                                print('!!!!!!!! c_pred')
-                                input()
+                            c_pred = save_div(c_nom, c_denom)
 
                             s_min_denom = (-c_nom / 1).exp()
                             s_min_nom = c_nom * s_min_denom
                             s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
                             s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
 
-                            if torch.any(torch.isnan(s_min_denom)):
-                                print('!!!!!!!! s_min_denom')
-                                input()
-
-                            if torch.any(torch.isnan(s_min_nom)):
-                                print('!!!!!!!! s_min_nom')
-                                input()
-
-                            score = s_nom / s_denom
-                            if torch.any(torch.isnan(score)):
-                                print('!!!!!!!! score')
-                                input()
+                            score = save_div(s_nom, s_denom)
                             loss = (1 - score).mean()
 
                         v_assign = (v_pred > 0.5).float()

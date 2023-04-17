@@ -23,7 +23,8 @@ def main():
     parser.add_argument('--test_splits', type=str, nargs='+', choices=['sat', 'unsat', 'augmented_sat', 'augmented_unsat', 'trimmed'], default=None, help='Validation splits')
     parser.add_argument('--test_sample_size', type=int, default=None, help='The number of instance in validation dataset')
     parser.add_argument('--test_augment_ratio', type=float, default=None, help='The ratio between added clauses and all learned clauses')
-    parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'assignment', 'unsat_core'], default=None, help='Directory with validating data')
+    parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'unsat_core'], default=None, help='Directory with validating data')
+    parser.add_argument('--decoding', type=str, choices=['standard', '2-clustering', 'multiple_assignments'], default='standard', help='Decoding techniques for satisfying assignment prediction')
     parser.add_argument('--data_fetching', type=str, choices=['parallel', 'sequential'], default='parallel', help='Fetch data in sequential order or in parallel')
     parser.add_argument('--batch_size', type=int, default=512, help='Batch size')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
@@ -61,11 +62,8 @@ def main():
     model.load_state_dict(checkpoint['state_dict'])
     model.to(opts.device)
 
-    all_results = []
     test_tot = 0
-    test_acc = 0
-    rmse = 0
-    solved = 0
+    test_cnt = 0
 
     if opts.task == 'satisfiability':
         format_table = FormatTable()
@@ -82,23 +80,38 @@ def main():
                 pred = model(data)
                 label = data.y
                 format_table.update(pred, label)
-                all_results.extend(pred.tolist())
-            else:
-                pass
-            
-        test_tot += batch_size
+            elif opts.taks == 'assignment':
+                if opts.decoding == 'standard':
+                    v_pred = model(data)
+                    v_assign = (v_pred > 0.5).float()
+                    l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
+                    c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
+                    sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
+                    test_cnt += sat_batch.sum().item()
+                elif opts.decoding == '2-clustering':
+                    pass
+                else:
+                    assert opts.decoding == 'multiple_assignments'
+                    v_preds = model(data)
+                    s_batches = []
+                    for v_pred in v_preds:
+                        v_assign = (v_pred > 0.5).float()
+                        l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
+                        c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
+                        sat_batches.append((scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float())
+                    s_batch = torch.clamp(torch.stack(sat_batches, dim=0).sum(dim=0), max=1)
+                    test_cnt += sat_batch.sum().item()
+
+                test_tot += batch_size
     
     if opts.task == 'satisfiability':
         format_table.print_stats()
     elif opts.task == 'assignment':
-        pass
-
+        test_acc = test_cnt / test_tot
+        print('Testing accuracy: %f' % test_acc)
+    
     t = time.time() - t0
     print('Solving Time: %f' % t)
-
-    # with open('%s/task=%s_difficulty=%s_dataset=%s_split=%s_checkpoint=%s_n_iterations=%d.pkl' % \
-    #     (opts.eval_dir, opts.task, difficulty, dataset, '_'.join(opts.test_splits), checkpoint_name, opts.n_iterations), 'wb') as f:
-    #     pickle.dump((all_results, test_acc), f)
 
 
 if __name__ == '__main__':

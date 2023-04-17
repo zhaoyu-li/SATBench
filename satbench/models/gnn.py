@@ -225,15 +225,18 @@ class GNN_LCG(nn.Module):
                 return torch.sigmoid(g_logit)
 
         elif self.opts.task == 'assignment':
-            if not self.training and self.opts.multiple_assignments:
+            if self.training or self.opts.decoding == 'standard':
+                v_logit = self.v_readout(v_embs[-1])
+                return torch.sigmoid(v_logit)
+            elif self.opts.decoding == '2-clustering':
+                pass
+            else:
+                assert self.opts.decoding == 'multipule_assignemnts'
                 v_assigns = []
-                for l_emb in l_embs:
-                    v_logit = self.l_readout(l_emb.reshape(-1, self.opts.dim * 2))
+                for v_emb in v_embs:
+                    v_logit = self.v_readout(v_emb)
                     v_assigns.append(torch.sigmoid(v_logit))
                 return v_assigns
-            else:
-                v_logit = self.l_readout(l_embs[-1].reshape(-1, self.opts.dim * 2))
-                return torch.sigmoid(v_logit)
             
 
 class GGNN_VCG(nn.Module):
@@ -433,15 +436,16 @@ class GNN_VCG(nn.Module):
             return torch.sigmoid(g_logit)
 
         elif self.opts.task == 'assignment':
-            if not self.training and self.opts.multiple_assignments:
+            if self.training or self.opts.decoding == 'standard':
+                v_logit = self.v_readout(v_embs[-1])
+                return torch.sigmoid(v_logit)
+            else:
+                assert self.opts.decoding == 'multipule_assignemnts'
                 v_assigns = []
                 for v_emb in v_embs:
                     v_logit = self.v_readout(v_emb)
                     v_assigns.append(torch.sigmoid(v_logit))
                 return v_assigns
-            else:
-                v_logit = self.v_readout(v_embs[-1])
-                return torch.sigmoid(v_logit)
 
 
 def GNN(opts):

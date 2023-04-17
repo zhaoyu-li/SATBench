@@ -4,11 +4,11 @@ import subprocess
 
 def train():
     os.makedirs('command', exist_ok=True)
-    for seed in [123, 233, 345]: # 123, 233,
-        for dataset in ['k-clique', 'k-domset']: # 'ca', 'k-clique', 'k-color', 'k-domset'
-            for model in ['gcn', 'ggnn', 'gin', 'neurosat']: # 'gcn', 'ggnn', 'gin', 'neurosat'
+    for seed in [123, 233, 345]: # 123, 233, 345
+        for dataset in ['ps']: # 'ca', 'ps', 'k-clique',  'k-domset', 'k-color'
+            for model in ['neurosat']: # 'gcn', 'gin', 'ggnn', 'neurosat'
                 for ite in [32]:
-                    for graph in ['lcg', 'vcg']: # 'lcg'
+                    for graph in ['lcg']: # 'lcg', 'vcg'
                         for difficulty in ['easy']:
                             if model == 'neurosat' and graph == 'vcg':
                                 continue
@@ -26,16 +26,16 @@ def train():
                                 f.write('#SBATCH --output=/dev/null\n')
                                 f.write('#SBATCH --ntasks=1\n')
                                 f.write('#SBATCH --time=1-23:00:00\n')
-                                f.write('#SBATCH --gres=gpu:a100l:1\n')
+                                f.write('#SBATCH --gres=gpu:rtx8000:1\n')
                                 f.write('#SBATCH --mem=32G\n')
                                 f.write('#SBATCH --cpus-per-task=16\n')
                                 f.write('\n')
                                 f.write('module load anaconda/3\n')
                                 f.write('conda activate satbench\n')
                                 f.write('\n')
-                                f.write(f'python train_model.py satisfiability ~/scratch/satbench/{difficulty}/{dataset}/train/ \\\n')
+                                f.write(f'python train_model.py satisfiability $SCRATCH/satbench/{difficulty}/{dataset}/train/ \\\n')
                                 f.write('    --train_splits sat unsat \\\n')
-                                f.write(f'    --valid_dir ~/scratch/satbench/{difficulty}/{dataset}/valid/ \\\n')
+                                f.write(f'    --valid_dir $SCRATCH/satbench/{difficulty}/{dataset}/valid/ \\\n')
                                 f.write('    --valid_splits sat unsat \\\n')
                                 f.write('    --label satisfiability \\\n')
                                 f.write('    --scheduler ReduceLROnPlateau \\\n')
@@ -90,8 +90,8 @@ def eval():
                                     f.write('conda activate satbench\n')
                                     f.write('\n')
                                     f.write(
-                                        f'python eval_model.py satisfiability ~/scratch/satbench/{difficulty}/{target_dataset}/test/ \\\n')
-                                    f.write(f'    ~/scratch/runs/task\=satisfiability_difficulty\={difficulty}_dataset\={ori_dataset}_splits\=sat_unsat_label\=satisfiability_loss\=None/graph={graph}_init_emb=learned_model={model}_n_iterations={ite}_seed={seed}_lr={lr}_weight_decay=1e-08/checkpoints/model_best.pt \\\n')
+                                        f'python eval_model.py satisfiability $SCRATCH/satbench/{difficulty}/{target_dataset}/test/ \\\n')
+                                    f.write(f'    $SCRATCH/runs/task\=satisfiability_difficulty\={difficulty}_dataset\={ori_dataset}_splits\=sat_unsat_label\=satisfiability_loss\=None/graph={graph}_init_emb=learned_model={model}_n_iterations={ite}_seed={seed}_lr={lr}_weight_decay=1e-08/checkpoints/model_best.pt \\\n')
                                     f.write(f'    --model {model} \\\n')
                                     f.write(f'    --graph {graph} \\\n')
                                     f.write(f'    --n_iterations {ite} \\\n')

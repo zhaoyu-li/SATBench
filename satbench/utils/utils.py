@@ -144,5 +144,9 @@ def safe_log(t, eps=1e-8):
     return (t + eps).log()
 
 
+def safe_div(a, b, eps=1e-8):
+    return a / (b + eps)
+
+
 def hash_clauses(clauses):
     return [hash(frozenset(clause)) for clause in clauses]
