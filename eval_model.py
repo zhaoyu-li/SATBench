@@ -80,7 +80,7 @@ def main():
                 pred = model(data)
                 label = data.y
                 format_table.update(pred, label)
-            elif opts.taks == 'assignment':
+            elif opts.task == 'assignment':
                 if opts.decoding == 'standard':
                     v_pred = model(data)
                     v_assign = (v_pred > 0.5).float()

@@ -226,7 +226,7 @@ class GNN_LCG(nn.Module):
                 return torch.sigmoid(g_logit)
 
         elif self.opts.task == 'assignment':
-            if self.training or self.opts.decoding == 'standard':
+            if not hasattr(self.opts, 'decoding') or self.opts.decoding == 'standard':
                 v_logit = self.l_readout(l_embs[-1].reshape(-1, self.opts.dim * 2)).reshape(-1)
                 return torch.sigmoid(v_logit)
             elif self.opts.decoding == '2-clustering':
@@ -462,7 +462,7 @@ class GNN_VCG(nn.Module):
             return torch.sigmoid(g_logit)
 
         elif self.opts.task == 'assignment':
-            if self.training or self.opts.decoding == 'standard':
+            if not hasattr(self.opts, 'decoding') or self.opts.decoding == 'standard':
                 v_logit = self.v_readout(v_embs[-1]).reshape(-1)
                 return torch.sigmoid(v_logit)
             else:
