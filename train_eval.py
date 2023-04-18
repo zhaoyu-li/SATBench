@@ -4,11 +4,11 @@ import subprocess
 
 def train():
     os.makedirs('command', exist_ok=True)
-    for seed in [123, 233, 345]: # 123, 233, 345
-        for dataset in ['ps']: # 'ca', 'ps', 'k-clique',  'k-domset', 'k-color'
-            for model in ['neurosat']: # 'gcn', 'gin', 'ggnn', 'neurosat'
+    for seed in [233, 345, 123]: # 123, 233, 345
+        for dataset in ['ca', 'ps', 'k-clique',  'k-domset', 'k-color']: # 'ca', 'ps', 'k-clique',  'k-domset', 'k-color'
+            for model in ['gcn', 'gin', 'ggnn', 'neurosat']: # 'gcn', 'gin', 'ggnn', 'neurosat'
                 for ite in [32]:
-                    for graph in ['lcg']: # 'lcg', 'vcg'
+                    for graph in ['lcg', 'vcg']: # 'lcg', 'vcg'
                         for difficulty in ['easy']:
                             if model == 'neurosat' and graph == 'vcg':
                                 continue

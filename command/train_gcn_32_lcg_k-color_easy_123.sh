@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=train_gcn_32_lcg_k-color_easy_123
-#SBATCH --output=%x_%j.out
+#SBATCH --output=/dev/null
 #SBATCH --ntasks=1
 #SBATCH --time=1-23:00:00
 #SBATCH --gres=gpu:rtx8000:1
@@ -10,9 +10,9 @@
 module load anaconda/3
 conda activate satbench
 
-python train_model.py satisfiability ~/scratch/satbench/easy/k-color/train/ \
+python train_model.py satisfiability $SCRATCH/satbench/easy/k-color/train/ \
     --train_splits sat unsat \
-    --valid_dir ~/scratch/satbench/easy/k-color/valid/ \
+    --valid_dir $SCRATCH/satbench/easy/k-color/valid/ \
     --valid_splits sat unsat \
     --label satisfiability \
     --scheduler ReduceLROnPlateau \
@@ -22,3 +22,4 @@ python train_model.py satisfiability ~/scratch/satbench/easy/k-color/train/ \
     --model gcn \
     --graph lcg \
     --seed 123
+    --batch_size 128

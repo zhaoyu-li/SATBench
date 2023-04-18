@@ -1,4 +1,5 @@
 CNFgen==0.9.0
 networkx
-python-sat
+python-sat==0.1.7.dev26
 tqdm
+kmeans_pytorch @ git+ssh://git@github.com/zhaoyu-li/kmeans_pytorch.git

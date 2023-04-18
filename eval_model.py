@@ -81,6 +81,10 @@ def main():
                 label = data.y
                 format_table.update(pred, label)
             elif opts.task == 'assignment':
+                c_size = data.c_size.sum().item()
+                c_batch = data.c_batch
+                l_edge_index = data.l_edge_index
+                c_edge_index = data.c_edge_index
                 if opts.decoding == 'standard':
                     v_pred = model(data)
                     v_assign = (v_pred > 0.5).float()
@@ -90,23 +94,23 @@ def main():
                     test_cnt += sat_batch.sum().item()
                 elif opts.decoding == '2-clustering':
                     v_assigns = model(data)
-                    s_batches = []
+                    sat_batches = []
                     for v_assign in v_assigns:
                         l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
                         c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
                         sat_batches.append((scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float())
-                    s_batch = torch.clamp(torch.stack(sat_batches, dim=0).sum(dim=0), max=1)
+                    sat_batch = torch.clamp(torch.stack(sat_batches, dim=0).sum(dim=0), max=1)
                     test_cnt += sat_batch.sum().item()
                 else:
                     assert opts.decoding == 'multiple_assignments'
                     v_preds = model(data)
-                    s_batches = []
+                    sat_batches = []
                     for v_pred in v_preds:
                         v_assign = (v_pred > 0.5).float()
                         l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
                         c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
                         sat_batches.append((scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float())
-                    s_batch = torch.clamp(torch.stack(sat_batches, dim=0).sum(dim=0), max=1)
+                    sat_batch = torch.clamp(torch.stack(sat_batches, dim=0).sum(dim=0), max=1)
                     test_cnt += sat_batch.sum().item()
 
                 test_tot += batch_size

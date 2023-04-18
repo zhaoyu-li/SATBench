@@ -237,12 +237,11 @@ class GNN_LCG(nn.Module):
                     l_emb = l_embs[-1][idx:idx+l_num]
                     idx += l_num
 
-                    _, centers = kmeans(X=l_emb, num_clusters=2, distance='euclidean', device=self.opts.device)
-                    centers = centers.to(self.opts.device)
-                    distance1 = x - centers[[0], :]
+                    _, centers = kmeans(X=l_emb, num_clusters=2, distance='euclidean', tqdm_flag=0, device=self.opts.device)
+                    distance1 = l_emb - centers[[0], :]
                     distance1 = (distance1 * distance1).sum(dim=1)
 
-                    distance2 = x - centers[[1], :]
+                    distance2 = l_emb - centers[[1], :]
                     distance2 = (distance2 * distance2).sum(dim=1)
 
                     pl_distance2, nl_distance2 = torch.chunk(distance2.reshape(-1, 2), 2, 1)
