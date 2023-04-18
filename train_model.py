@@ -141,7 +141,7 @@ def main():
                     l_edge_index = data.l_edge_index
                     c_edge_index = data.c_edge_index
 
-                    l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
+                    l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                     l_pred_aggr = scatter_sum(safe_log(1 - l_pred[l_edge_index]), c_edge_index, dim=0, dim_size=c_size)
                     c_loss = -safe_log(1 - l_pred_aggr.exp())
                     loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
@@ -152,24 +152,24 @@ def main():
                     l_edge_index = data.l_edge_index
                     c_edge_index = data.c_edge_index
 
-                    l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
+                    l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                     s_max_denom = (l_pred[l_edge_index] / 1).exp()
                     s_max_nom = l_pred[l_edge_index] * s_max_denom
 
                     c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
                     c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
-                    c_pred = save_div(c_nom, c_denom)
+                    c_pred = safe_div(c_nom, c_denom)
 
                     s_min_denom = (-c_nom / 1).exp()
                     s_min_nom = c_nom * s_min_denom
                     s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
                     s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
 
-                    score = save_div(s_nom, s_denom)
+                    score = safe_div(s_nom, s_denom)
                     loss = (1 - score).mean()
 
                 v_assign = (v_pred > 0.5).float()
-                l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
+                l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
                 c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
                 sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
 
@@ -229,7 +229,7 @@ def main():
                             l_edge_index = data.l_edge_index
                             c_edge_index = data.c_edge_index
 
-                            l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
+                            l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                             l_pred_aggr = scatter_sum(safe_log(1 - l_pred[l_edge_index]), c_edge_index, dim=0, dim_size=c_size)
                             c_loss = -safe_log(1 - l_pred_aggr.exp())
                             loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
@@ -239,24 +239,24 @@ def main():
                             l_edge_index = data.l_edge_index
                             c_edge_index = data.c_edge_index
 
-                            l_pred = torch.cat([v_pred, 1 - v_pred], dim=1).reshape(-1)
+                            l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                             s_max_denom = (l_pred[l_edge_index] / 1).exp()
                             s_max_nom = l_pred[l_edge_index] * s_max_denom
 
                             c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
                             c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
-                            c_pred = save_div(c_nom, c_denom)
+                            c_pred = safe_div(c_nom, c_denom)
 
                             s_min_denom = (-c_nom / 1).exp()
                             s_min_nom = c_nom * s_min_denom
                             s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
                             s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
 
-                            score = save_div(s_nom, s_denom)
+                            score = safe_div(s_nom, s_denom)
                             loss = (1 - score).mean()
 
                         v_assign = (v_pred > 0.5).float()
-                        l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
+                        l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
                         c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
                         sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
                         valid_cnt += sat_batch.sum().item()

@@ -8,7 +8,7 @@ import time
 
 from satbench.utils.options import add_model_options
 from satbench.utils.logger import Logger
-from satbench.utils.utils import set_seed, safe_log
+from satbench.utils.utils import set_seed
 from satbench.utils.format_print import FormatTable
 from satbench.data.dataloader import get_dataloader
 from satbench.models.gnn import GNN
@@ -84,19 +84,26 @@ def main():
                 if opts.decoding == 'standard':
                     v_pred = model(data)
                     v_assign = (v_pred > 0.5).float()
-                    l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
+                    l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
                     c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
                     sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
                     test_cnt += sat_batch.sum().item()
                 elif opts.decoding == '2-clustering':
-                    pass
+                    v_assigns = model(data)
+                    s_batches = []
+                    for v_assign in v_assigns:
+                        l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
+                        c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
+                        sat_batches.append((scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float())
+                    s_batch = torch.clamp(torch.stack(sat_batches, dim=0).sum(dim=0), max=1)
+                    test_cnt += sat_batch.sum().item()
                 else:
                     assert opts.decoding == 'multiple_assignments'
                     v_preds = model(data)
                     s_batches = []
                     for v_pred in v_preds:
                         v_assign = (v_pred > 0.5).float()
-                        l_assign = torch.cat([v_assign, 1 - v_assign], dim=1).reshape(-1)
+                        l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
                         c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
                         sat_batches.append((scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float())
                     s_batch = torch.clamp(torch.stack(sat_batches, dim=0).sum(dim=0), max=1)

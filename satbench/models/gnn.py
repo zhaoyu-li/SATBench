@@ -6,6 +6,7 @@ import math
 from satbench.models.mlp import MLP
 from satbench.models.ln_lstm_cell import LayerNormBasicLSTMCell
 from torch_scatter import scatter_sum, scatter_mean
+from kmeans_pytorch import kmeans
 
 
 class NeuroSAT(nn.Module):
@@ -226,18 +227,43 @@ class GNN_LCG(nn.Module):
 
         elif self.opts.task == 'assignment':
             if self.training or self.opts.decoding == 'standard':
-                v_logit = self.v_readout(v_embs[-1])
+                v_logit = self.l_readout(l_embs[-1].reshape(-1, self.opts.dim * 2)).reshape(-1)
                 return torch.sigmoid(v_logit)
             elif self.opts.decoding == '2-clustering':
-                pass
+                v_assign1 = []
+                v_assign2 = []
+                idx = 0
+                for l_num in data.l_size:
+                    l_emb = l_embs[-1][idx:idx+l_num]
+                    idx += l_num
+
+                    _, centers = kmeans(X=l_emb, num_clusters=2, distance='euclidean', device=self.opts.device)
+                    centers = centers.to(self.opts.device)
+                    distance1 = x - centers[[0], :]
+                    distance1 = (distance1 * distance1).sum(dim=1)
+
+                    distance2 = x - centers[[1], :]
+                    distance2 = (distance2 * distance2).sum(dim=1)
+
+                    pl_distance2, nl_distance2 = torch.chunk(distance2.reshape(-1, 2), 2, 1)
+                    neg_distance2 = torch.cat([nl_distance2, pl_distance2], dim=1).reshape(-1)
+
+                    distance = (distance1 + neg_distance2).reshape(-1, 2)
+                    assignment1 = torch.argmin(distance, dim=1)
+                    assignment2 = 1 - assignment1
+
+                    v_assign1.append(assignment1)
+                    v_assign2.append(assignment2)
+
+                return [torch.cat(v_assign1, dim=0), torch.cat(v_assign2, dim=0)]
             else:
                 assert self.opts.decoding == 'multipule_assignemnts'
                 v_assigns = []
-                for v_emb in v_embs:
-                    v_logit = self.v_readout(v_emb)
+                for l_emb in l_embs:
+                    v_logit = self.l_readout(l_emb.reshape(-1, self.opts.dim * 2)).reshape(-1)
                     v_assigns.append(torch.sigmoid(v_logit))
                 return v_assigns
-            
+
 
 class GGNN_VCG(nn.Module):
     def __init__(self, opts):
@@ -437,13 +463,13 @@ class GNN_VCG(nn.Module):
 
         elif self.opts.task == 'assignment':
             if self.training or self.opts.decoding == 'standard':
-                v_logit = self.v_readout(v_embs[-1])
+                v_logit = self.v_readout(v_embs[-1]).reshape(-1)
                 return torch.sigmoid(v_logit)
             else:
                 assert self.opts.decoding == 'multipule_assignemnts'
                 v_assigns = []
                 for v_emb in v_embs:
-                    v_logit = self.v_readout(v_emb)
+                    v_logit = self.v_readout(v_emb).reshape(-1)
                     v_assigns.append(torch.sigmoid(v_logit))
                 return v_assigns
 
