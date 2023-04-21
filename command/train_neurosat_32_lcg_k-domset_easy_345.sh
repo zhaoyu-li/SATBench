@@ -2,7 +2,7 @@
 #SBATCH --job-name=train_neurosat_32_lcg_k-domset_easy_345
 #SBATCH --output=/dev/null
 #SBATCH --ntasks=1
-#SBATCH --time=1-23:00:00
+#SBATCH --time=5-23:00:00
 #SBATCH --gres=gpu:rtx8000:1
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=16
@@ -21,5 +21,5 @@ python train_model.py satisfiability $SCRATCH/satbench/easy/k-domset/train/ \
     --weight_decay 1.e-8 \
     --model neurosat \
     --graph lcg \
-    --seed 345
+    --seed 345 \
     --batch_size 64

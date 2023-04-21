@@ -49,11 +49,11 @@ class Generator:
             if solver.solve():
                 if not sat:
                     sat = True
-                    write_dimacs_to(n_vars, clauses, os.path.join(self.opts.sat_out_dir, '%.5d.cnf' % (t)))
+                    write_dimacs_to(n_vars, clauses, os.path.join(self.opts.sat_out_dir, '%.5d.cnf' % (t+40000)))
             else:
                 if not unsat:
                     unsat = True
-                    write_dimacs_to(n_vars, clauses, os.path.join(self.opts.unsat_out_dir, '%.5d.cnf' % (t)))
+                    write_dimacs_to(n_vars, clauses, os.path.join(self.opts.unsat_out_dir, '%.5d.cnf' % (t+40000)))
 
 
 def main():
@@ -84,6 +84,8 @@ def main():
     with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
         pool.map(generator.run, range(opts.n_instances))
 
+    #for i in range(opts.n_instances):
+    #    generator.run(i)
 
 if __name__ == '__main__':
     main()

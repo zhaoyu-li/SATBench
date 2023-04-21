@@ -2,7 +2,7 @@
 #SBATCH --job-name=train_gcn_32_lcg_k-clique_easy_233
 #SBATCH --output=/dev/null
 #SBATCH --ntasks=1
-#SBATCH --time=1-23:00:00
+#SBATCH --time=5-23:00:00
 #SBATCH --gres=gpu:rtx8000:1
 #SBATCH --mem=32G
 #SBATCH --cpus-per-task=16
@@ -21,5 +21,5 @@ python train_model.py satisfiability $SCRATCH/satbench/easy/k-clique/train/ \
     --weight_decay 1.e-8 \
     --model gcn \
     --graph lcg \
-    --seed 233
+    --seed 233 \
     --batch_size 64

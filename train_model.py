@@ -153,14 +153,14 @@ def main():
                     c_edge_index = data.c_edge_index
 
                     l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
-                    s_max_denom = (l_pred[l_edge_index] / 1).exp()
+                    s_max_denom = (l_pred[l_edge_index] / 0.5).exp()
                     s_max_nom = l_pred[l_edge_index] * s_max_denom
 
                     c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
                     c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
                     c_pred = safe_div(c_nom, c_denom)
 
-                    s_min_denom = (-c_nom / 1).exp()
+                    s_min_denom = (-c_nom / 0.5).exp()
                     s_min_nom = c_nom * s_min_denom
                     s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
                     s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
@@ -240,14 +240,14 @@ def main():
                             c_edge_index = data.c_edge_index
 
                             l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
-                            s_max_denom = (l_pred[l_edge_index] / 1).exp()
+                            s_max_denom = (l_pred[l_edge_index] / 0.5).exp()
                             s_max_nom = l_pred[l_edge_index] * s_max_denom
 
                             c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
                             c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
                             c_pred = safe_div(c_nom, c_denom)
 
-                            s_min_denom = (-c_nom / 1).exp()
+                            s_min_denom = (-c_nom / 0.5).exp()
                             s_min_nom = c_nom * s_min_denom
                             s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
                             s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)

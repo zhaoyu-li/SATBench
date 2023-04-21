@@ -149,4 +149,4 @@ def safe_div(a, b, eps=1e-8):
 
 
 def hash_clauses(clauses):
-    return [hash(frozenset(clause)) for clause in clauses]
+    return hash(frozenset([hash(frozenset([str(literal).encode() for literal in clause])) for clause in clauses]))
