@@ -89,6 +89,18 @@ def parse_proof_file(file_path):
     return learned_clauses, deleted_clauses
 
 
+def clean_clauses(clauses):
+    hash_clauses = []
+    cleaned_clauses = []
+    for clause in clauses:
+        hash_clause = hash(frozenset([str(literal).encode() for literal in clause]))
+        if hash_clause in hash_clauses:
+            continue
+        hash_clauses.append(hash_clause)
+        cleaned_clauses.append(clause)
+    return cleaned_clauses
+
+
 def literal2v_idx(literal):
     assert abs(literal) > 0
     sign = literal > 0

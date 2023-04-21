@@ -5,7 +5,7 @@ import networkx as nx
 import networkx.algorithms.community as nx_comm
 
 from tqdm import tqdm
-from satbench.utils.utils import parse_cnf_file, VIG, VCG
+from satbench.utils.utils import parse_cnf_file, VIG, VCG, clean_clauses
 from collections import defaultdict
 
 
@@ -15,6 +15,7 @@ terms = ['n_vars', 'n_clauses', 'vig-diameter', 'vig-characteristic_path_length'
 
 def calc_stats(f):
     n_vars, clauses = parse_cnf_file(f)
+    clauses = clean_clauses(clauses)
     vig = VIG(n_vars, clauses)
     vcg = VCG(n_vars, clauses)
 

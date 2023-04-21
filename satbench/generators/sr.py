@@ -31,11 +31,6 @@ class Generator:
                 k = k_base + np.random.geometric(self.opts.p_geo)
                 vs = np.random.choice(n_vars, size=min(n_vars, k), replace=False)
                 clause = [int(v + 1) if random.random() < 0.5 else int(-(v + 1)) for v in vs]
-                hash_clause = hash(frozenset([str(literal).encode() for literal in clause]))
-                if hash_clause in hash_clauses:
-                    continue
-                else:
-                    hash_clauses.append(hash_clause)
 
                 solver.add_clause(clause)
                 if solver.solve():

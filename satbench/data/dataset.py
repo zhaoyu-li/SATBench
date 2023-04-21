@@ -5,7 +5,7 @@ import pickle
 import itertools
 
 from torch_geometric.data import Dataset
-from satbench.utils.utils import parse_cnf_file
+from satbench.utils.utils import parse_cnf_file, clean_clauses
 from satbench.data.data import construct_lcg, construct_vcg
 
 
@@ -112,9 +112,11 @@ class SATDataset(Dataset):
         
         if 'augment' in split and self.augment_ratio is not None:
             n_vars, clauses, learned_clauses = parse_cnf_file(cnf_filepath, split_clauses=True)
+            clauses = clean_clauses(clauses)
             clauses = clauses + learned_clauses[:int(len(learned_clauses) * self.augment_ratio)]
         else:
             n_vars, clauses = parse_cnf_file(cnf_filepath)
+            clauses = clean_clauses(clauses)
             
         if self.opts.graph == 'lcg':
             data = construct_lcg(n_vars, clauses)
