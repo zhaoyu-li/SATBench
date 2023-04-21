@@ -21,5 +21,5 @@ python train_model.py satisfiability $SCRATCH/satbench/easy/ca/train/ \
     --weight_decay 1.e-8 \
     --model ggnn \
     --graph vcg \
-    --seed 233
+    --seed 233 \
     --batch_size 128

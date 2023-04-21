@@ -2,7 +2,7 @@ import argparse
 import glob
 import os
 
-from satbench.utils.utils import parse_cnf_file, hash_clauses
+from satbench.utils.utils import parse_cnf_file, clean_clauses, hash_clauses
 from tqdm import tqdm
 
 
@@ -23,6 +23,7 @@ def main():
 
     for f in tqdm(all_files):
         n_vars, clauses = parse_cnf_file(f)
+        clauses = clean_clauses(clauses)
         h = hash_clauses(clauses)
         
         if h not in hash_list:

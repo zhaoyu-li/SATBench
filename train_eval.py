@@ -5,7 +5,7 @@ import subprocess
 def train():
     os.makedirs('command', exist_ok=True)
     for seed in [233, 345, 123]: # 123, 233, 345
-        for dataset in ['k-clique',  'k-domset']: # 'ca', 'ps', 'k-clique',  'k-domset', 'k-color'
+        for dataset in ['sr',  'ps', 'ca']: # 'ca', 'ps', 'k-clique',  'k-domset', 'k-color'
             for model in ['gcn', 'gin', 'ggnn', 'neurosat']: # 'gcn', 'gin', 'ggnn', 'neurosat'
                 for ite in [32]:
                     for graph in ['lcg', 'vcg']: # 'lcg', 'vcg'
@@ -25,7 +25,7 @@ def train():
                                 f.write(f'#SBATCH --job-name=train_{model}_{ite}_{graph}_{dataset}_{difficulty}_{seed}\n')
                                 f.write('#SBATCH --output=/dev/null\n')
                                 f.write('#SBATCH --ntasks=1\n')
-                                f.write('#SBATCH --time=5-23:00:00\n')
+                                f.write('#SBATCH --time=1-23:00:00\n')
                                 f.write('#SBATCH --gres=gpu:rtx8000:1\n')
                                 f.write('#SBATCH --mem=32G\n')
                                 f.write('#SBATCH --cpus-per-task=16\n')
