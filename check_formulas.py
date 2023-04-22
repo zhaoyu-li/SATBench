@@ -15,7 +15,7 @@ def main():
     print('Checking duplicated formulas...')
 
     all_files = sorted(glob.glob(opts.data_dir + '/**/*.cnf', recursive=True))
-    all_files = [os.path.abspath(f) for f in all_files]
+    all_files = [os.path.abspath(f) for f in all_files if 'augmented' nt in f]
 
     print(f'There are {len(all_files)} files.')
     
