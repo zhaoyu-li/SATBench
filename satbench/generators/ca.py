@@ -4,24 +4,30 @@ import random
 import subprocess
 import networkx as nx
 
-from concurrent.futures.process import ProcessPoolExecutor
 from pysat.solvers import Cadical
-from satbench.utils.utils import ROOT_DIR, parse_cnf_file, write_dimacs_to, VIG
+from satbench.utils.utils import ROOT_DIR, parse_cnf_file, write_dimacs_to, VIG, clean_clauses, hash_clauses
+from tqdm import tqdm
 
 
 class Generator:
     def __init__(self, opts):
         self.opts = opts
-        self.opts.sat_out_dir = os.path.join(self.opts.out_dir, 'sat')
-        self.opts.unsat_out_dir = os.path.join(self.opts.out_dir, 'unsat')
+        self.hash_list = []
         self.exec_dir = os.path.join(ROOT_DIR, 'external')
-        os.makedirs(self.opts.sat_out_dir, exist_ok=True)
-        os.makedirs(self.opts.unsat_out_dir, exist_ok=True)
-        
-    def run(self, t):
-        if t % self.opts.print_interval == 0:
-            print('Generating instance %d.' % t)
 
+    def run(self):
+        for split in ['train', 'valid', 'test']:
+            n_instances = getattr(self.opts, f'{split}_instances')
+            if n_instances > 0:
+                sat_out_dir = os.path.join(os.path.abspath(self.opts.out_dir), f'{split}/sat')
+                unsat_out_dir = os.path.join(os.path.abspath(self.opts.out_dir), f'{split}/unsat')
+                os.makedirs(sat_out_dir, exist_ok=True)
+                os.makedirs(unsat_out_dir, exist_ok=True)
+                print(f'Generating ca {split} set...')
+                for i in tqdm(range(n_instances)):
+                    self.generate(i, sat_out_dir, unsat_out_dir)
+
+    def generate(self, i, sat_out_dir, unsat_out_dir):
         sat = False
         unsat = False
         
@@ -37,7 +43,7 @@ class Generator:
             assert n_communities >= k and n_communities <= int(n_vars / k)
             modularity = random.uniform(self.opts.min_q, self.opts.max_q)
             
-            cnf_filepath = os.path.abspath(os.path.join(self.opts.out_dir, '%.5d.cnf' % (t)))
+            cnf_filepath = os.path.abspath(os.path.join(self.opts.out_dir, '%.5d.cnf' % (i)))
             cmd_line = ['./ca', '-n', str(n_vars), '-m', str(n_clauses), '-c', str(n_communities), \
                 '-Q', str(modularity), '-k', str(k), '-s', str(random.randint(0, 2**32)), '-o', cnf_filepath]
             
@@ -56,16 +62,24 @@ class Generator:
                 os.remove(cnf_filepath)
                 continue
 
+            clauses = clean_clauses(clauses)
+            h = hash_clauses(clauses)
+
+            if h in self.hash_list:
+                continue
+
             solver = Cadical(bootstrap_with=clauses)
             
             if solver.solve():
                 if not sat:
                     sat = True
-                    write_dimacs_to(n_vars, clauses, os.path.join(self.opts.sat_out_dir, '%.5d.cnf' % (t)))
+                    self.hash_list.append(h)
+                    write_dimacs_to(n_vars, clauses, os.path.join(sat_out_dir, '%.5d.cnf' % (i)))
             else:
                 if not unsat:
                     unsat = True
-                    write_dimacs_to(n_vars, clauses, os.path.join(self.opts.unsat_out_dir, '%.5d.cnf' % (t)))
+                    self.hash_list.append(h)
+                    write_dimacs_to(n_vars, clauses, os.path.join(unsat_out_dir, '%.5d.cnf' % (i)))
 
             os.remove(cnf_filepath)
 
@@ -73,7 +87,10 @@ class Generator:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('out_dir', type=str)
-    parser.add_argument('n_instances', type=int)
+    
+    parser.add_argument('--train_instances', type=int, default=0)
+    parser.add_argument('--valid_instances', type=int, default=0)
+    parser.add_argument('--test_instances', type=int, default=0)
 
     parser.add_argument('--min_k', type=int, default=4)
     parser.add_argument('--max_k', type=int, default=5)
@@ -87,19 +104,14 @@ def main():
     parser.add_argument('--min_q', type=float, default=0.7)
     parser.add_argument('--max_q', type=float, default=0.9)
 
-    parser.add_argument('--print_interval', type=int, default=1000)
-
-    parser.add_argument('--n_process', type=int, default=10, help='Number of processes to run')
+    parser.add_argument('--seed', type=int, default=0)
 
     opts = parser.parse_args()
 
+    random.seed(opts.seed)
+
     generator = Generator(opts)
-    
-    # with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
-    #     pool.map(generator.run, range(opts.n_instances))
-    
-    for i in range(opts.n_instances):
-        generator.run(i)
+    generator.run()
 
 
 if __name__ == '__main__':

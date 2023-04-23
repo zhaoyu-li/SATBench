@@ -14,6 +14,7 @@ class Generator:
     def __init__(self, opts):
         self.opts = opts
         self.hash_list = []
+    
     def run(self):
         for split in ['train', 'valid', 'test']:
             n_instances = getattr(self.opts, f'{split}_instances')
