@@ -15,11 +15,12 @@ def main():
     print('Checking duplicated formulas...')
 
     all_files = sorted(glob.glob(opts.data_dir + '/**/*.cnf', recursive=True))
-    all_files = [os.path.abspath(f) for f in all_files if 'augmented' nt in f]
+    all_files = [os.path.abspath(f) for f in all_files if 'augmented' not in f]
 
     print(f'There are {len(all_files)} files.')
     
     hash_list = []
+    cnt = 0
 
     for f in tqdm(all_files):
         n_vars, clauses = parse_cnf_file(f)
@@ -32,7 +33,9 @@ def main():
             print('There are two same CNF formulas!')
             print(f)
             print(all_files[hash_list.index(h)])
-            break
+            #break
+            cnt += 1
+    print(cnt)
 
 
 if __name__ == '__main__':
