@@ -9,6 +9,8 @@ from cnfgen import DominatingSet
 from satbench.utils.utils import write_dimacs_to, VIG, clean_clauses, hash_clauses
 from tqdm import tqdm
 
+sat_cnt = 0
+unsat_cnt = 0
 
 class Generator:
     def __init__(self, opts):
@@ -36,7 +38,9 @@ class Generator:
         
         while not sat or not unsat:
             v = random.randint(max(self.opts.min_v, k + 1), self.opts.max_v)
-            p = 1 - pow(1 - pow(1/math.comb(v,k), 1/(v-k)), 1/k)
+            # c = random.uniform(0.5, 1)
+            c = 1
+            p = 1 - pow(1 - pow(c/math.comb(v,k), 1/(v-k)), 1/k)
             graph = nx.generators.erdos_renyi_graph(v, p=p)
             if not nx.is_connected(graph):
                 continue
@@ -58,11 +62,16 @@ class Generator:
             solver = Cadical(bootstrap_with=clauses)
             
             if solver.solve():
+                global sat_cnt
+                sat_cnt += 1
                 if not sat:
                     sat = True
                     self.hash_list.append(h)
                     write_dimacs_to(n_vars, clauses, os.path.join(sat_out_dir, '%.5d.cnf' % (i)))
             else:
+                global unsat_cnt
+                unsat_cnt += 1
+
                 if not unsat:
                     unsat = True
                     self.hash_list.append(h)
@@ -92,6 +101,8 @@ def main():
     generator = Generator(opts)
     generator.run()
 
+    print(sat_cnt)
+    print(unsat_cnt)
 
 if __name__ == '__main__':
     main()

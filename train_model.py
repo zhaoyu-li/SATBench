@@ -130,28 +130,23 @@ def main():
                 format_table.update(pred, label)
 
             elif opts.task == 'assignment':
+                c_size = data.c_size.sum().item()
+                c_batch = data.c_batch
+                l_edge_index = data.l_edge_index
+                c_edge_index = data.c_edge_index
+                
                 v_pred = model(data)
 
                 if opts.loss == 'supervised':
                     label = data.y
                     loss = F.binary_cross_entropy(v_pred, label)
                 elif opts.loss == 'unsupervised':
-                    c_size = data.c_size.sum().item()
-                    c_batch = data.c_batch
-                    l_edge_index = data.l_edge_index
-                    c_edge_index = data.c_edge_index
-
                     l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                     l_pred_aggr = scatter_sum(safe_log(1 - l_pred[l_edge_index]), c_edge_index, dim=0, dim_size=c_size)
                     c_loss = -safe_log(1 - l_pred_aggr.exp())
                     loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
 
                 elif opts.loss == 'unsupervisedv2':
-                    c_size = data.c_size.sum().item()
-                    c_batch = data.c_batch
-                    l_edge_index = data.l_edge_index
-                    c_edge_index = data.c_edge_index
-
                     l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                     s_max_denom = (l_pred[l_edge_index] / 0.5).exp()
                     s_max_nom = l_pred[l_edge_index] * s_max_denom
@@ -218,27 +213,22 @@ def main():
                         loss = F.binary_cross_entropy(pred, label)
                         format_table.update(pred, label)
                     elif opts.task == 'assignment':
+                        c_size = data.c_size.sum().item()
+                        c_batch = data.c_batch
+                        l_edge_index = data.l_edge_index
+                        c_edge_index = data.c_edge_index
+
                         v_pred = model(data)
 
                         if opts.loss == 'supervised':
                             label = data.y
                             loss = F.binary_cross_entropy(v_pred, label)
                         elif opts.loss == 'unsupervised':
-                            c_size = data.c_size.sum().item()
-                            c_batch = data.c_batch
-                            l_edge_index = data.l_edge_index
-                            c_edge_index = data.c_edge_index
-
                             l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                             l_pred_aggr = scatter_sum(safe_log(1 - l_pred[l_edge_index]), c_edge_index, dim=0, dim_size=c_size)
                             c_loss = -safe_log(1 - l_pred_aggr.exp())
                             loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
                         elif opts.loss == 'unsupervisedv2':
-                            c_size = data.c_size.sum().item()
-                            c_batch = data.c_batch
-                            l_edge_index = data.l_edge_index
-                            c_edge_index = data.c_edge_index
-
                             l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                             s_max_denom = (l_pred[l_edge_index] / 0.5).exp()
                             s_max_nom = l_pred[l_edge_index] * s_max_denom

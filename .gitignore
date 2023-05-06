@@ -1,5 +1,5 @@
 satbench.egg-info
 runs
-
+command
 /*.sh
 /*.out
