@@ -4,6 +4,7 @@ import glob
 import pickle
 import subprocess
 import numpy as np
+import itertools
 
 from concurrent.futures.process import ProcessPoolExecutor
 from satbench.utils.utils import ROOT_DIR
@@ -16,6 +17,7 @@ class Generator:
     def run(self, cnf_filepath):
         filename = os.path.splitext(os.path.basename(cnf_filepath))[0]
         proof_filepath = os.path.join(os.path.dirname(cnf_filepath), filename + '.proof')
+        core_filepath = os.path.join(os.path.dirname(cnf_filepath), filename + '.core')
 
         if not os.path.exists(proof_filepath):
             prover_cmd_line = ['./cadical', '--unsat', cnf_filepath, proof_filepath]
@@ -30,7 +32,6 @@ class Generator:
             return
         
         if not os.path.exists(core_filepath):
-            core_filepath = os.path.join(os.path.dirname(cnf_filepath), filename + '.core')
             checker_cmd_line = ['./drat-trim', cnf_filepath, proof_filepath, '-c', core_filepath]
 
             try:
@@ -41,7 +42,7 @@ class Generator:
         
         if not os.path.exists(core_filepath):
             return
-
+        
         with open(core_filepath, 'r') as f:
             lines = f.readlines()
             header = lines[0].strip().split()
@@ -74,9 +75,11 @@ def main():
 
     assert len(all_files) > 0
     all_files = [os.path.abspath(f) for f in all_files]
-    
+
     with ProcessPoolExecutor(max_workers=opts.n_process) as pool:
         pool.map(generator.run, all_files)
+
+
 
 
 if __name__ == '__main__':

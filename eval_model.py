@@ -17,13 +17,13 @@ from torch_scatter import scatter_sum
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('task', type=str, choices=['satisfiability', 'assignment'], help='Experiment task')
+    parser.add_argument('task', type=str, choices=['satisfiability', 'assignment', 'core_variable'], help='Experiment task')
     parser.add_argument('test_dir', type=str, help='Directory with testing data')
     parser.add_argument('checkpoint', type=str, help='Checkpoint to be tested')
     parser.add_argument('--test_splits', type=str, nargs='+', choices=['sat', 'unsat', 'augmented_sat', 'augmented_unsat', 'trimmed'], default=None, help='Validation splits')
     parser.add_argument('--test_sample_size', type=int, default=None, help='The number of instance in validation dataset')
     parser.add_argument('--test_augment_ratio', type=float, default=None, help='The ratio between added clauses and all learned clauses')
-    parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'unsat_core'], default=None, help='Directory with validating data')
+    parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'core_variable'], default=None, help='Directory with validating data')
     parser.add_argument('--decoding', type=str, choices=['standard', '2-clustering', 'multiple_assignments'], default='standard', help='Decoding techniques for satisfying assignment prediction')
     parser.add_argument('--data_fetching', type=str, choices=['parallel', 'sequential'], default='parallel', help='Fetch data in sequential order or in parallel')
     parser.add_argument('--batch_size', type=int, default=512, help='Batch size')
@@ -36,13 +36,21 @@ def main():
     set_seed(opts.seed)
     
     opts.log_dir = os.path.abspath(os.path.join(opts.checkpoint,  '..', '..'))
-    opts.eval_dir = os.path.join(opts.log_dir, 'evaluations')
 
     difficulty, dataset = tuple(os.path.abspath(opts.test_dir).split(os.path.sep)[-3:-1])
     checkpoint_name = os.path.splitext(os.path.basename(opts.checkpoint))[0]
-    os.makedirs(opts.eval_dir, exist_ok=True)
+    names = []
+    for split in opts.test_splits:
+        if 'augment' in split and opts.test_augment_ratio is not None:
+            names.append(split + str(opts.test_augment_ratio))
+        else:
+            names.append(split)
+    splits_name = '_'.join(names)
 
-    opts.log = os.path.join(opts.log_dir, f'eval_log_iterations_{opts.n_iterations}_test_{opts.test_dir.split("/")[-3]}_{opts.test_dir.split("/")[-4]}.txt')
+    if opts.task == 'assignment':
+        opts.log = os.path.join(opts.log_dir, f'eval_task={opts.task}_difficulty={difficulty}_dataset={dataset}_splits={splits_name}_decoding={opts.decoding}_n_iterations={opts.n_iterations}_checkpoint={checkpoint_name}.txt')
+    else:
+        opts.log = os.path.join(opts.log_dir, f'eval_task={opts.task}_difficulty={difficulty}_dataset={dataset}_splits={splits_name}_n_iterations={opts.n_iterations}_checkpoint={checkpoint_name}.txt')
     sys.stdout = Logger(opts.log, sys.stdout)
     sys.stderr = Logger(opts.log, sys.stderr)
 
@@ -65,7 +73,7 @@ def main():
     test_tot = 0
     test_cnt = 0
 
-    if opts.task == 'satisfiability':
+    if opts.task == 'satisfiability' or opts.task == 'core_variable':
         format_table = FormatTable()
 
     t0 = time.time()
@@ -114,8 +122,13 @@ def main():
                     test_cnt += sat_batch.sum().item()
 
                 test_tot += batch_size
+            else:
+                assert opts.task == 'core_variable'
+                v_pred = model(data)
+                label = data.y
+                format_table.update(v_pred, label)
     
-    if opts.task == 'satisfiability':
+    if opts.task == 'satisfiability' or opts.task == 'core_variable':
         format_table.print_stats()
     elif opts.task == 'assignment':
         test_acc = test_cnt / test_tot

@@ -28,7 +28,7 @@ def main():
     parser.add_argument('--valid_splits', type=str, nargs='+', choices=['sat', 'unsat', 'augmented_sat', 'augmented_unsat'], default=None, help='Category of the validating data')
     parser.add_argument('--valid_sample_size', type=int, default=None, help='The number of instance in validation dataset')
     parser.add_argument('--valid_augment_ratio', type=float, default=None, help='The ratio between added clauses and all learned clauses')
-    parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'assignment', 'unsat_core'], default=None, help='Label')
+    parser.add_argument('--label', type=str, choices=[None, 'satisfiability', 'assignment', 'core_variable'], default=None, help='Label')
     parser.add_argument('--data_fetching', type=str, choices=['parallel', 'sequential'], default='parallel', help='Fetch data in sequential order or in parallel')
     parser.add_argument('--loss', type=str, choices=[None, 'unsupervised', 'unsupervisedv2', 'supervised'], default=None, help='Loss type for assignment prediction')
     parser.add_argument('--save_model_epochs', type=int, default=1, help='Number of epochs between model savings')
@@ -42,7 +42,7 @@ def main():
     parser.add_argument('--lr_patience', type=int, default=10, help='Learning rate patience')
     parser.add_argument('--clip_norm', type=float, default=1.0, help='Clipping norm')
     parser.add_argument('--seed', type=int, default=0, help='Random seed')
-    parser.add_argument('--run_dir', type=str, default='/network/scratch/z/zhaoyu.li/runs/')
+    parser.add_argument('--run_dir', type=str, default='/network/scratch/x/xujie.si/runs/')
 
     add_model_options(parser)
 
@@ -92,7 +92,7 @@ def main():
             assert opts.scheduler == 'StepLR'
             scheduler = StepLR(optimizer, step_size=opts.lr_step_size, gamma=opts.lr_factor)
 
-    if opts.task == 'satisfiability':
+    if opts.task == 'satisfiability' or opts.task == 'core_variable':
         format_table = FormatTable()
 
     best_loss = float('inf')
@@ -103,7 +103,7 @@ def main():
         train_cnt = 0
         train_tot = 0
 
-        if opts.task == 'satisfiability':
+        if opts.task == 'satisfiability' or opts.task == 'core_variable':
             format_table.reset()
 
         model.train()
@@ -169,6 +169,15 @@ def main():
                 sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
 
                 train_cnt += sat_batch.sum().item()
+            
+            else:
+                assert opts.task == 'core_variable'
+                v_pred = model(data)
+                v_cls = v_pred > 0.5
+                label = data.y
+                loss = F.binary_cross_entropy(v_pred, label)
+
+                format_table.update(v_pred, label)
 
             train_loss += loss.item() * batch_size
             train_tot += batch_size
@@ -179,9 +188,10 @@ def main():
         train_loss /= train_tot
         print('Training LR: %f, Training loss: %f' % (optimizer.param_groups[0]['lr'], train_loss))
 
-        if opts.task == 'satisfiability':
+        if opts.task == 'satisfiability' or opts.task == 'core_variable':
             format_table.print_stats()
-        elif opts.task == 'assignment':
+        else:
+            assert opts.task == 'assignment'
             train_acc = train_cnt / train_tot
             print('Training accuracy: %f' % train_acc)
 
@@ -199,7 +209,7 @@ def main():
             valid_cnt = 0
             valid_tot = 0
 
-            if opts.task == 'satisfiability':
+            if opts.task == 'satisfiability' or opts.task == 'core_variable':
                 format_table.reset()
 
             model.eval()
@@ -250,6 +260,15 @@ def main():
                         c_sat = torch.clamp(scatter_sum(l_assign[l_edge_index], c_edge_index, dim=0, dim_size=c_size), max=1)
                         sat_batch = (scatter_sum(c_sat, c_batch, dim=0, dim_size=batch_size) == data.c_size).float()
                         valid_cnt += sat_batch.sum().item()
+                    else:
+                        assert opts.task == 'core_variable'
+                        v_pred = model(data)
+                        v_cls = v_pred > 0.5
+                        label = data.y
+                        loss = F.binary_cross_entropy(v_pred, label)
+
+                        format_table.update(v_pred, label)
+
 
                 valid_loss += loss.item() * batch_size
                 valid_tot += batch_size
@@ -257,9 +276,10 @@ def main():
             valid_loss /= valid_tot
             print('Validating loss: %f' % valid_loss)
 
-            if opts.task == 'satisfiability':
+            if opts.task == 'satisfiability' or opts.task == 'core_variable':
                 format_table.print_stats()
-            elif opts.task == 'assignment':
+            else:
+                assert opts.task == 'assignment'
                 valid_acc = valid_cnt / valid_tot
                 print('Validating accuracy: %f' % valid_acc)
 

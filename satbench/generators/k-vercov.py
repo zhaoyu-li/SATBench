@@ -5,9 +5,14 @@ import random
 import networkx as nx
 
 from pysat.solvers import Cadical
-from cnfgen import GraphColoringFormula
+from cnfgen import VertexCoverFormula
 from satbench.utils.utils import write_dimacs_to, VIG, clean_clauses, hash_clauses
 from tqdm import tqdm
+from scipy.optimize import fsolve
+
+
+sat_cnt = 0
+unsat_cnt = 0
 
 
 class Generator:
@@ -23,7 +28,7 @@ class Generator:
                 unsat_out_dir = os.path.join(os.path.abspath(self.opts.out_dir), f'{split}/unsat')
                 os.makedirs(sat_out_dir, exist_ok=True)
                 os.makedirs(unsat_out_dir, exist_ok=True)
-                print(f'Generating k-color {split} set...')
+                print(f'Generating k-vercov {split} set...')
                 for i in tqdm(range(n_instances)):
                     self.generate(i, sat_out_dir, unsat_out_dir)
     
@@ -36,15 +41,34 @@ class Generator:
         
         while not sat or not unsat:
             v = random.randint(self.opts.min_v, self.opts.max_v)
-            c = random.uniform(1, 2)
-            c = 1.2
-            p = c  * math.log(v) / v + 0.05
+            if v - k <= 2:
+                v = v + 1
+            com_k = v - k
+            p = pow(1/math.comb(v,com_k), 2/(com_k*(com_k-1)))
+            com_graph = nx.generators.erdos_renyi_graph(v, p=p)
+            graph = nx.complement(com_graph)
 
-            graph = nx.generators.erdos_renyi_graph(v, p=p)
+            # c = random.uniform(0.1, 0.2)
+            # p = (2 * v) * math.log(c*v)/((v - k)*(v - 1))
+
+            # print(p)
+            # print(p)
+            # c = 1.2
+            # p = c  * math.log(v) / v + 0.05
+            # print(p)
+            # input()
+            # p_func = lambda p: (v-k)/(2*v) - math.log(p*(v-1))/(p*(v-1))
+            # p_initial = (2*v)*math.log(v)/((v-k)*(v-1))
+            # p_initial = 0.5
+            # p = fsolve(p_func, p_initial)
+            # print(p_initial)
+            # print(p)
+
+            # graph = nx.generators.erdos_renyi_graph(v, p=p)
             if not nx.is_connected(graph):
                 continue
             
-            cnf = GraphColoringFormula(graph, k)
+            cnf = VertexCoverFormula(graph, k)
             n_vars = len(list(cnf.variables()))
             clauses = list(cnf.clauses())
             clauses = [list(cnf._compress_clause(clause)) for clause in clauses]
@@ -61,11 +85,15 @@ class Generator:
             solver = Cadical(bootstrap_with=clauses)
             
             if solver.solve():
+                global sat_cnt 
+                sat_cnt += 1
                 if not sat:
                     sat = True
                     self.hash_list.append(h)
                     write_dimacs_to(n_vars, clauses, os.path.join(sat_out_dir, '%.5d.cnf' % (i)))
             else:
+                global unsat_cnt
+                unsat_cnt += 1
                 if not unsat:
                     unsat = True
                     self.hash_list.append(h)
@@ -94,6 +122,9 @@ def main():
 
     generator = Generator(opts)
     generator.run()
+
+    print(sat_cnt)
+    print(unsat_cnt)
 
 
 if __name__ == '__main__':

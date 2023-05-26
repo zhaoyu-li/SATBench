@@ -199,7 +199,8 @@ class GNN_LCG(nn.Module):
             c_init = torch.randn(1, self.opts.dim, device=self.opts.device) * math.sqrt(2 / self.opts.dim)
             l_emb = l_init.repeat(l_size, 1)
             c_emb = c_init.repeat(c_size, 1)
-
+            l_emb = torch.randn(l_size, self.opts.dim, device=self.opts.device) * math.sqrt(2 / self.opts.dim)
+            c_emb = torch.randn(c_size, self.opts.dim, device=self.opts.device) * math.sqrt(2 / self.opts.dim)
 
         l_embs, c_embs = self.gnn(l_size, c_size, l_edge_index, c_edge_index, l_emb, c_emb)
         
@@ -256,12 +257,16 @@ class GNN_LCG(nn.Module):
 
                 return [torch.cat(v_assign1, dim=0), torch.cat(v_assign2, dim=0)]
             else:
-                assert self.opts.decoding == 'multipule_assignemnts'
+                assert self.opts.decoding == 'multiple_assignments'
                 v_assigns = []
                 for l_emb in l_embs:
                     v_logit = self.l_readout(l_emb.reshape(-1, self.opts.dim * 2)).reshape(-1)
                     v_assigns.append(torch.sigmoid(v_logit))
                 return v_assigns
+        else:
+            assert self.opts.task == 'core_variable'
+            v_logit = self.l_readout(l_embs[-1].reshape(-1, self.opts.dim * 2)).reshape(-1)
+            return torch.sigmoid(v_logit)
 
 
 class GGNN_VCG(nn.Module):
@@ -471,6 +476,10 @@ class GNN_VCG(nn.Module):
                     v_logit = self.v_readout(v_emb).reshape(-1)
                     v_assigns.append(torch.sigmoid(v_logit))
                 return v_assigns
+        else:
+            assert self.opts.task == 'core_variable'
+            v_logit = self.v_readout(v_embs[-1]).reshape(-1)
+            return torch.sigmoid(v_logit)
 
 
 def GNN(opts):
