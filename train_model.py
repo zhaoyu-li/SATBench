@@ -151,7 +151,7 @@ def main():
 
                 elif opts.loss == 'unsupervisedv2':
                     global_step += 1
-                    tau = max(math.pow(global_step, -0.4), 0.1)
+                    tau = max(pow(global_step, -0.4), 0.1)
 
                     l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                     s_max_denom = (l_pred[l_edge_index] / tau).exp()
@@ -245,7 +245,7 @@ def main():
                             c_loss = -safe_log(1 - l_pred_aggr.exp())
                             loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
                         elif opts.loss == 'unsupervisedv2':
-                            tau = max(math.pow(global_step, -0.4), 0.1)
+                            tau = max(pow(global_step, -0.4), 0.1)
 
                             l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                             s_max_denom = (l_pred[l_edge_index] / tau).exp()
