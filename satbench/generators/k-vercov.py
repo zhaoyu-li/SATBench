@@ -48,23 +48,6 @@ class Generator:
             com_graph = nx.generators.erdos_renyi_graph(v, p=p)
             graph = nx.complement(com_graph)
 
-            # c = random.uniform(0.1, 0.2)
-            # p = (2 * v) * math.log(c*v)/((v - k)*(v - 1))
-
-            # print(p)
-            # print(p)
-            # c = 1.2
-            # p = c  * math.log(v) / v + 0.05
-            # print(p)
-            # input()
-            # p_func = lambda p: (v-k)/(2*v) - math.log(p*(v-1))/(p*(v-1))
-            # p_initial = (2*v)*math.log(v)/((v-k)*(v-1))
-            # p_initial = 0.5
-            # p = fsolve(p_func, p_initial)
-            # print(p_initial)
-            # print(p)
-
-            # graph = nx.generators.erdos_renyi_graph(v, p=p)
             if not nx.is_connected(graph):
                 continue
             
@@ -76,7 +59,7 @@ class Generator:
             if not nx.is_connected(vig):
                 continue
 
-            # clauses = clean_clauses(clauses)
+            clauses = clean_clauses(clauses)
             h = hash_clauses(clauses)
 
             if h in self.hash_list:

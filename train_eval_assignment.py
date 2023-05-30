@@ -10,8 +10,8 @@ def train():
             for model in ['gcn', 'gin', 'ggnn', 'neurosat']: # 'gcn', 'gin', 'ggnn', 'neurosat'
                 for ite in [32]:
                     for graph in ['lcg', 'vcg']: # 'lcg', 'vcg'
-                        for difficulty in ['easy']:
-                            for loss in ['supervised']:
+                        for difficulty in ['medium']:
+                            for loss in ['supervised', 'unsupervised', 'unsupervisedv2']:
                                 if model == 'neurosat' and graph == 'vcg':
                                     continue
 
@@ -31,7 +31,7 @@ def train():
                                     f.write(f'#SBATCH --job-name=assignment_train_{model}_{ite}_{graph}_{dataset}_{difficulty}_{loss}_{seed}\n')
                                     f.write('#SBATCH --output=/dev/null\n')
                                     f.write('#SBATCH --ntasks=1\n')
-                                    f.write('#SBATCH --time=1-12:00:00\n')
+                                    f.write('#SBATCH --time=2-12:00:00\n')
                                     f.write('#SBATCH --gres=gpu:rtx8000:1\n')
                                     f.write('#SBATCH --mem=16G\n')
                                     f.write('#SBATCH --cpus-per-task=8\n')
@@ -197,4 +197,5 @@ def summary():
                 print('\n', file=f, end='')
             print('\n', file=f, end='')
 
-summary()
+# summary()
+train()

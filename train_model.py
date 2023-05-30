@@ -95,6 +95,9 @@ def main():
     if opts.task == 'satisfiability' or opts.task == 'core_variable':
         format_table = FormatTable()
 
+    if opts.task == 'assignment' and opts.loss == 'unsupervisedv2':
+        global_step = 0
+
     best_loss = float('inf')
     for epoch in range(opts.epochs):
         print('EPOCH #%d' % epoch)
@@ -147,21 +150,24 @@ def main():
                     loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
 
                 elif opts.loss == 'unsupervisedv2':
+                    global_step += 1
+                    tau = max(math.pow(global_step, -0.4), 0.1)
+
                     l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
-                    s_max_denom = (l_pred[l_edge_index] / 0.5).exp()
+                    s_max_denom = (l_pred[l_edge_index] / tau).exp()
                     s_max_nom = l_pred[l_edge_index] * s_max_denom
 
                     c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
                     c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
                     c_pred = safe_div(c_nom, c_denom)
 
-                    s_min_denom = (-c_nom / 0.5).exp()
+                    s_min_denom = (-c_nom / tau).exp()
                     s_min_nom = c_nom * s_min_denom
                     s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
                     s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
 
                     score = safe_div(s_nom, s_denom)
-                    loss = (1 - score).mean()
+                    loss = (torch.pow(1-score,10)/(torch.pow(1-score,10)+torch.pow(score,10))).mean()
 
                 v_assign = (v_pred > 0.5).float()
                 l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
@@ -239,21 +245,23 @@ def main():
                             c_loss = -safe_log(1 - l_pred_aggr.exp())
                             loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
                         elif opts.loss == 'unsupervisedv2':
+                            tau = max(math.pow(global_step, -0.4), 0.1)
+
                             l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
-                            s_max_denom = (l_pred[l_edge_index] / 0.5).exp()
+                            s_max_denom = (l_pred[l_edge_index] / tau).exp()
                             s_max_nom = l_pred[l_edge_index] * s_max_denom
 
                             c_nom = scatter_sum(s_max_nom, c_edge_index, dim=0, dim_size=c_size)
                             c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
                             c_pred = safe_div(c_nom, c_denom)
 
-                            s_min_denom = (-c_nom / 0.5).exp()
+                            s_min_denom = (-c_nom / tau).exp()
                             s_min_nom = c_nom * s_min_denom
                             s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
                             s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
 
                             score = safe_div(s_nom, s_denom)
-                            loss = (1 - score).mean()
+                            loss = (torch.pow(1-score,10)/(torch.pow(1-score,10)+torch.pow(score,10))).mean()
 
                         v_assign = (v_pred > 0.5).float()
                         l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)

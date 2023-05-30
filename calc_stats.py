@@ -46,7 +46,7 @@ def main():
 
     stats = defaultdict(int)
     
-    for f in tqdm(all_files):
+    for f in all_files:
         s = calc_stats(f)
         for t in terms:
             stats[t] += s[t]
