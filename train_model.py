@@ -151,7 +151,7 @@ def main():
 
                 elif opts.loss == 'unsupervisedv2':
                     global_step += 1
-                    tau = max(pow(global_step, -0.4), 0.1)
+                    tau = pow(global_step, -0.4)
 
                     l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                     s_max_denom = (l_pred[l_edge_index] / tau).exp()
@@ -161,13 +161,13 @@ def main():
                     c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
                     c_pred = safe_div(c_nom, c_denom)
 
-                    s_min_denom = (-c_nom / tau).exp()
-                    s_min_nom = c_nom * s_min_denom
-                    s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
-                    s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
+                    s_min_denom = (-c_pred / tau).exp()
+                    s_min_nom = c_pred * s_min_denom
+                    s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=batch_size)
+                    s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=batch_size)
 
                     score = safe_div(s_nom, s_denom)
-                    loss = (torch.pow(1-score,10)/(torch.pow(1-score,10)+torch.pow(score,10))).mean()
+                    loss = (1 - score).mean()
 
                 v_assign = (v_pred > 0.5).float()
                 l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
@@ -245,7 +245,7 @@ def main():
                             c_loss = -safe_log(1 - l_pred_aggr.exp())
                             loss = scatter_sum(c_loss, c_batch, dim=0, dim_size=batch_size).mean()
                         elif opts.loss == 'unsupervisedv2':
-                            tau = max(pow(global_step, -0.4), 0.1)
+                            tau = pow(global_step, -0.4)
 
                             l_pred = torch.stack([v_pred, 1 - v_pred], dim=1).reshape(-1)
                             s_max_denom = (l_pred[l_edge_index] / tau).exp()
@@ -255,13 +255,13 @@ def main():
                             c_denom = scatter_sum(s_max_denom, c_edge_index, dim=0, dim_size=c_size)
                             c_pred = safe_div(c_nom, c_denom)
 
-                            s_min_denom = (-c_nom / tau).exp()
-                            s_min_nom = c_nom * s_min_denom
-                            s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=c_size)
-                            s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=c_size)
+                            s_min_denom = (-c_pred / tau).exp()
+                            s_min_nom = c_pred * s_min_denom
+                            s_nom = scatter_sum(s_min_nom, c_batch, dim=0, dim_size=batch_size)
+                            s_denom = scatter_sum(s_min_denom, c_batch, dim=0, dim_size=batch_size)
 
                             score = safe_div(s_nom, s_denom)
-                            loss = (torch.pow(1-score,10)/(torch.pow(1-score,10)+torch.pow(score,10))).mean()
+                            loss = (1 - score).mean()
 
                         v_assign = (v_pred > 0.5).float()
                         l_assign = torch.stack([v_assign, 1 - v_assign], dim=1).reshape(-1)
@@ -276,7 +276,6 @@ def main():
                         loss = F.binary_cross_entropy(v_pred, label)
 
                         format_table.update(v_pred, label)
-
 
                 valid_loss += loss.item() * batch_size
                 valid_tot += batch_size
